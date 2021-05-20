@@ -182,3 +182,11 @@ duration_seconds = 1800
 [profile AssumeWithDoNotNormalize]
 role_arn = AssumeWithDoNotNormalize_role_arn
 source_profile = DoNotNormalize
+
+[profile UseDualStackEndpointEnabled]
+region = "us-west-2"
+use_dualstack_endpoint=true
+
+[profile UseDualStackEndpointDisabled]
+region = "us-west-2"
+use_dualstack_endpoint=false

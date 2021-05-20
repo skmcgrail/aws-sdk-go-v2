@@ -50,6 +50,8 @@ const (
 	awsEnableEndpointDiscoveryEnvKey = "AWS_ENABLE_ENDPOINT_DISCOVERY"
 
 	awsS3UseARNRegionEnvVar = "AWS_S3_USE_ARN_REGION"
+
+	awsUseDualStackEndpoint = "AWS_USE_DUALSTACK_ENDPOINT"
 )
 
 var (
@@ -180,6 +182,12 @@ type EnvConfig struct {
 	//
 	// AWS_S3_USE_ARN_REGION=true
 	S3UseARNRegion *bool
+
+	// Specifies that SDK clients must resolve a dual-stack endpoint for
+	// services.
+	//
+	// AWS_USE_DUALSTACK_ENDPOINT=true
+	UseDualStackEndpoint aws.DualStackEndpoint
 }
 
 // loadEnvConfig reads configuration values from the OS's environment variables.
@@ -225,6 +233,10 @@ func NewEnvConfig() (EnvConfig, error) {
 	}
 
 	if err := setBoolPtrFromEnvVal(&cfg.S3UseARNRegion, []string{awsS3UseARNRegionEnvVar}); err != nil {
+		return cfg, err
+	}
+
+	if err := setUseDualStackEndpointFromEnvVal(&cfg.UseDualStackEndpoint, []string{awsUseDualStackEndpoint}); err != nil {
 		return cfg, err
 	}
 
@@ -304,6 +316,16 @@ func (c EnvConfig) GetS3UseARNRegion(ctx context.Context) (value, ok bool, err e
 	return *c.S3UseARNRegion, true, nil
 }
 
+// GetUseDualStackEndpoint returns whether the service's dual-stack endpoint should be
+// used for requests.
+func (c EnvConfig) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpoint, found bool, err error) {
+	if c.UseDualStackEndpoint == aws.DualStackEndpointUnset {
+		return aws.DualStackEndpointUnset, false, nil
+	}
+
+	return c.UseDualStackEndpoint, true, nil
+}
+
 func setStringFromEnvVal(dst *string, keys []string) {
 	for _, k := range keys {
 		if v := os.Getenv(k); len(v) > 0 {
@@ -354,6 +376,27 @@ func setEndpointDiscoveryTypeFromEnvVal(dst *aws.EndpointDiscoveryEnableState, k
 			*dst = aws.EndpointDiscoveryEnabled
 		case strings.EqualFold(value, endpointDiscoveryAuto):
 			*dst = aws.EndpointDiscoveryAuto
+		default:
+			return fmt.Errorf(
+				"invalid value for environment variable, %s=%s, need true, false or auto",
+				k, value)
+		}
+	}
+	return nil
+}
+
+func setUseDualStackEndpointFromEnvVal(dst *aws.DualStackEndpoint, keys []string) error {
+	for _, k := range keys {
+		value := os.Getenv(k)
+		if len(value) == 0 {
+			continue // skip if empty
+		}
+
+		switch {
+		case strings.EqualFold(value, "true"):
+			*dst = aws.DualStackEndpointEnabled
+		case strings.EqualFold(value, "false"):
+			*dst = aws.DualStackEndpointDisabled
 		default:
 			return fmt.Errorf(
 				"invalid value for environment variable, %s=%s, need true, false or auto",

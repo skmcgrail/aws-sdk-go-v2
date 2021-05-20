@@ -395,6 +395,26 @@ func TestNewSharedConfig(t *testing.T) {
 				},
 			},
 		},
+		"dual-stack endpoint enabled": {
+			ConfigFilenames:      []string{testConfigFilename},
+			CredentialsFilenames: []string{testCredentialsFilename},
+			Profile:              "UseDualStackEndpointEnabled",
+			Expected: SharedConfig{
+				Profile:              "UseDualStackEndpointEnabled",
+				Region:               "us-west-2",
+				UseDualStackEndpoint: aws.DualStackEndpointEnabled,
+			},
+		},
+		"dual-stack endpoint disabled": {
+			ConfigFilenames:      []string{testConfigFilename},
+			CredentialsFilenames: []string{testCredentialsFilename},
+			Profile:              "UseDualStackEndpointDisabled",
+			Expected: SharedConfig{
+				Profile:              "UseDualStackEndpointDisabled",
+				Region:               "us-west-2",
+				UseDualStackEndpoint: aws.DualStackEndpointDisabled,
+			},
+		},
 	}
 
 	for name, c := range cases {

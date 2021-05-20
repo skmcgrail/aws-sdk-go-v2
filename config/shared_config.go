@@ -59,6 +59,9 @@ const (
 	// S3 ARN Region Usage
 	s3UseARNRegionKey = "s3_use_arn_region"
 
+	// Use DualStack Endpoint Resolution
+	useDualStackEndpoint = "use_dualstack_endpoint"
+
 	// DefaultSharedConfigProfile is the default profile to be used when
 	// loading configuration from the config files if another profile name
 	// is not provided.
@@ -152,6 +155,12 @@ type SharedConfig struct {
 	//
 	// s3_use_arn_region=true
 	S3UseARNRegion *bool
+
+	// Specifies that SDK clients must resolve a dual-stack endpoint for
+	// services.
+	//
+	// use_dualstack_endpoint=true
+	UseDualStackEndpoint aws.DualStackEndpoint
 }
 
 // GetS3UseARNRegion returns if the S3 service should allow ARNs to direct the region
@@ -184,6 +193,16 @@ func (c SharedConfig) getRegion(ctx context.Context) (string, bool, error) {
 // GetCredentialsProvider returns the credentials for a profile if they were set.
 func (c SharedConfig) getCredentialsProvider() (aws.Credentials, bool, error) {
 	return c.Credentials, true, nil
+}
+
+// GetUseDualStackEndpoint returns whether the service's dual-stack endpoint should be
+// used for requests.
+func (c SharedConfig) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpoint, found bool, err error) {
+	if c.UseDualStackEndpoint == aws.DualStackEndpointUnset {
+		return aws.DualStackEndpointUnset, false, nil
+	}
+
+	return c.UseDualStackEndpoint, true, nil
 }
 
 // loadSharedConfigIgnoreNotExist is an alias for loadSharedConfig with the
@@ -874,6 +893,8 @@ func (c *SharedConfig) setFromIniSection(profile string, section ini.Section) er
 	updateEndpointDiscoveryType(&c.EnableEndpointDiscovery, section, enableEndpointDiscoveryKey)
 	updateBoolPtr(&c.S3UseARNRegion, section, s3UseARNRegionKey)
 
+	updateUseDualStackEndpoint(&c.UseDualStackEndpoint, section, useDualStackEndpoint)
+
 	// Shared Credentials
 	creds := aws.Credentials{
 		AccessKeyID:     section.String(accessKeyIDKey),
@@ -1149,5 +1170,18 @@ func updateEndpointDiscoveryType(dst *aws.EndpointDiscoveryEnableState, section 
 		*dst = aws.EndpointDiscoveryEnabled
 	case strings.EqualFold(value, endpointDiscoveryAuto):
 		*dst = aws.EndpointDiscoveryAuto
+	}
+}
+
+// updateEndpointDiscoveryType will only update the dst with the value in the section, if
+// a valid key and corresponding EndpointDiscoveryType is found.
+func updateUseDualStackEndpoint(dst *aws.DualStackEndpoint, section ini.Section, key string) {
+	if !section.Has(key) {
+		return
+	}
+	if section.Bool(key) {
+		*dst = aws.DualStackEndpointEnabled
+	} else {
+		*dst = aws.DualStackEndpointDisabled
 	}
 }
