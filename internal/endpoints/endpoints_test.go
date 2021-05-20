@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestEndpointResolve(t *testing.T) {
@@ -23,7 +24,10 @@ func TestEndpointResolve(t *testing.T) {
 		},
 	}
 
-	resolved := e.resolve("aws", "us-west-2", defs, Options{})
+	resolved, err := e.resolve("aws", "us-west-2", defs, Options{})
+	if err != nil {
+		t.Errorf("expect no error, got %v", err)
+	}
 
 	if e, a := "https://service.us-west-2.amazonaws.com", resolved.URL; e != a {
 		t.Errorf("expect %v, got %v", e, a)
@@ -81,6 +85,14 @@ var testPartitions = Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
+		DualStackDefaults: Endpoint{
+			Hostname:          "api.service.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+			CredentialScope: CredentialScope{
+				Service: "service",
+			},
+		},
 		IsRegionalized: true,
 		Endpoints: Endpoints{
 			"us-west-1": {},
@@ -93,6 +105,9 @@ var testPartitions = Partitions{
 					Service: "foo",
 				},
 			},
+		},
+		DualStackEndpoints: Endpoints{
+			"us-west-2": Endpoint{},
 		},
 	},
 	{
@@ -124,6 +139,15 @@ var testPartitions = Partitions{
 				},
 			},
 		},
+		DualStackEndpoints: Endpoints{
+			"partition": {
+				Hostname: "some-global-thing.global.aws",
+				CredentialScope: CredentialScope{
+					Region:  "cn-east-1",
+					Service: "foo",
+				},
+			},
+		},
 	},
 	{
 		ID: "part-id-3",
@@ -141,6 +165,30 @@ var testPartitions = Partitions{
 		},
 		IsRegionalized: true,
 	},
+	{
+		ID: "part-id-4",
+		RegionRegex: func() *regexp.Regexp {
+			reg, _ := regexp.Compile("^(ca)\\-\\w+\\-\\d+$")
+			return reg
+		}(),
+		Defaults: Endpoint{
+			Hostname:          "service.{region}.amazonaws.com",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+			CredentialScope: CredentialScope{
+				Service: "foo",
+			},
+		},
+		DualStackDefaults: Endpoint{
+			Hostname:          "service.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+			CredentialScope: CredentialScope{
+				Service: "foo",
+			},
+		},
+		IsRegionalized: true,
+	},
 }
 
 func TestResolveEndpoint(t *testing.T) {
@@ -148,6 +196,7 @@ func TestResolveEndpoint(t *testing.T) {
 		Region   string
 		Options  Options
 		Expected aws.Endpoint
+		WantErr  bool
 	}{
 		"modeled region with no endpoint overrides": {
 			Region: "us-west-1",
@@ -218,15 +267,64 @@ func TestResolveEndpoint(t *testing.T) {
 				SigningMethod: "v4",
 			},
 		},
+		"us-west-2 dual-stack enabled, modeled region": {
+			Region:  "us-west-2",
+			Options: Options{UseDualStack: true},
+			Expected: aws.Endpoint{
+				PartitionID:   "part-id-1",
+				URL:           "https://api.service.us-west-2.aws",
+				SigningName:   "service",
+				SigningRegion: "us-west-2",
+				SigningMethod: "v4",
+			},
+		},
+		"us-west-3 dual-stack enabled, not modeled fallback to defaults": {
+			Region:  "us-west-3",
+			Options: Options{UseDualStack: true},
+			Expected: aws.Endpoint{
+				PartitionID:   "part-id-1",
+				URL:           "https://api.service.us-west-3.aws",
+				SigningName:   "service",
+				SigningRegion: "us-west-3",
+				SigningMethod: "v4",
+			},
+		},
+		"ca-west-1, dual-stack enabled, not modeled, and partition with no defaults": {
+			Region:  "eu-west-1",
+			Options: Options{UseDualStack: true},
+			WantErr: true,
+		},
+		"ca-west-1, dual-stack enabled, no modeled endpoints, partition with defaults": {
+			Region:  "ca-west-1",
+			Options: Options{UseDualStack: true},
+			Expected: aws.Endpoint{
+				URL:           "https://service.ca-west-1.aws",
+				PartitionID:   "part-id-4",
+				SigningName:   "foo",
+				SigningRegion: "ca-west-1",
+				SigningMethod: "v4",
+			},
+		},
+		"partition endpoint, dual-stack enabled": {
+			Region:  "partition",
+			Options: Options{UseDualStack: true},
+			Expected: aws.Endpoint{
+				PartitionID:   "part-id-2",
+				URL:           "https://some-global-thing.global.aws",
+				SigningRegion: "cn-east-1",
+				SigningName:   "foo",
+				SigningMethod: "v4",
+			},
+		},
 	}
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			endpoint, err := testPartitions.ResolveEndpoint(tt.Region, tt.Options)
-			if err != nil {
-				t.Errorf("expected no error, got %v", err)
+			if (err != nil) != (tt.WantErr) {
+				t.Errorf("WantErr=%v, got error: %v", tt.WantErr, err)
 			}
-			if e, a := tt.Expected, endpoint; !reflect.DeepEqual(e, a) {
-				t.Errorf("expected %v, got %v", e, a)
+			if diff := cmp.Diff(tt.Expected, endpoint); len(diff) > 0 {
+				t.Error(diff)
 			}
 		})
 	}

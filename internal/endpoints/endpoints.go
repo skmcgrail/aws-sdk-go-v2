@@ -22,6 +22,10 @@ var (
 type Options struct {
 	// Disable usage of HTTPS (TLS / SSL)
 	DisableHTTPS bool
+
+	// Instruct the resolver to use a service endpoint that supports dual-stack.
+	// If a service does not have a dual-stack endpoint an error will be returned by the resolver.
+	UseDualStack bool
 }
 
 // Partitions is a slice of partition
@@ -47,12 +51,14 @@ func (ps Partitions) ResolveEndpoint(region string, opts Options) (aws.Endpoint,
 
 // Partition is an AWS partition description for a service and its' region endpoints.
 type Partition struct {
-	ID                string
-	RegionRegex       *regexp.Regexp
-	PartitionEndpoint string
-	IsRegionalized    bool
-	Defaults          Endpoint
-	Endpoints         Endpoints
+	ID                 string
+	RegionRegex        *regexp.Regexp
+	PartitionEndpoint  string
+	IsRegionalized     bool
+	Defaults           Endpoint
+	DualStackDefaults  Endpoint
+	Endpoints          Endpoints
+	DualStackEndpoints Endpoints
 }
 
 func (p Partition) canResolveEndpoint(region string) bool {
@@ -66,23 +72,28 @@ func (p Partition) ResolveEndpoint(region string, options Options) (resolved aws
 		region = p.PartitionEndpoint
 	}
 
-	e, _ := p.endpointForRegion(region)
+	endpoints := p.Endpoints
+	defaults := p.Defaults
+	if options.UseDualStack {
+		endpoints = p.DualStackEndpoints
+		defaults = p.DualStackDefaults
+	}
 
-	return e.resolve(p.ID, region, p.Defaults, options), nil
+	return p.endpointForRegion(region, endpoints).resolve(p.ID, region, defaults, options)
 }
 
-func (p Partition) endpointForRegion(region string) (Endpoint, bool) {
-	if e, ok := p.Endpoints[region]; ok {
-		return e, true
+func (p Partition) endpointForRegion(region string, endpoints Endpoints) Endpoint {
+	if e, ok := endpoints[region]; ok {
+		return e
 	}
 
 	if !p.IsRegionalized {
-		return p.Endpoints[p.PartitionEndpoint], region == p.PartitionEndpoint
+		return endpoints[p.PartitionEndpoint]
 	}
 
 	// Unable to find any matching endpoint, return
 	// blank that will be used for generic endpoint creation.
-	return Endpoint{}, false
+	return Endpoint{}
 }
 
 // Endpoints is a map of service config regions to endpoints
@@ -107,11 +118,32 @@ type Endpoint struct {
 	SignatureVersions []string `json:"signatureVersions"`
 }
 
-func (e Endpoint) resolve(partition, region string, def Endpoint, options Options) aws.Endpoint {
+// IsZero returns whether the endpoint structure is an empty (zero) value.
+func (e Endpoint) IsZero() bool {
+	switch {
+	case e.Unresolveable != aws.UnknownTernary:
+		return false
+	case len(e.Hostname) != 0:
+		return false
+	case len(e.Protocols) != 0:
+		return false
+	case e.CredentialScope != (CredentialScope{}):
+		return false
+	case len(e.SignatureVersions) != 0:
+		return false
+	}
+	return true
+}
+
+func (e Endpoint) resolve(partition, region string, def Endpoint, options Options) (aws.Endpoint, error) {
 	var merged Endpoint
 	merged.mergeIn(def)
 	merged.mergeIn(e)
 	e = merged
+
+	if e.IsZero() {
+		return aws.Endpoint{}, fmt.Errorf("unable to resolve endpoint for region: %v", region)
+	}
 
 	var u string
 	if e.Unresolveable != aws.TrueTernary {
@@ -134,7 +166,7 @@ func (e Endpoint) resolve(partition, region string, def Endpoint, options Option
 		SigningRegion: signingRegion,
 		SigningName:   signingName,
 		SigningMethod: getByPriority(e.SignatureVersions, signerPriority, defaultSigner),
-	}
+	}, nil
 }
 
 func (e *Endpoint) mergeIn(other Endpoint) {
