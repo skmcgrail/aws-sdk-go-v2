@@ -25,3 +25,22 @@ func ResolveEnableEndpointDiscovery(ctx context.Context, configs []interface{}) 
 	}
 	return
 }
+
+// UseDualStackEndpointProvider is an interface for retrieving external configuration values for UseDualStackEndpoint
+type UseDualStackEndpointProvider interface {
+	GetUseDualStackEndpoint(context.Context) (value aws.DualStackEndpoint, found bool, err error)
+}
+
+// ResolveUseDualStackEndpoint extracts the first instance of a UseDualStackEndpoint from the config slice.
+// Additionally returns a boolean to indicate if the value was found in provided configs, and error if one is encountered.
+func ResolveUseDualStackEndpoint(ctx context.Context, configs []interface{}) (value aws.DualStackEndpoint, found bool, err error) {
+	for _, cfg := range configs {
+		if p, ok := cfg.(UseDualStackEndpointProvider); ok {
+			value, found, err = p.GetUseDualStackEndpoint(ctx)
+			if err != nil || found {
+				break
+			}
+		}
+	}
+	return
+}
