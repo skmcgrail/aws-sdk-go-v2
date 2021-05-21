@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import software.amazon.smithy.aws.go.codegen.customization.S3ModelUtils;
 import software.amazon.smithy.aws.traits.ServiceTrait;
 import software.amazon.smithy.codegen.core.CodegenException;
 import software.amazon.smithy.codegen.core.Symbol;
@@ -54,6 +55,7 @@ public final class EndpointGenerator implements Runnable {
     public static final String CLIENT_CONFIG_RESOLVER = "resolveDefaultEndpointConfiguration";
     public static final String RESOLVER_CONSTRUCTOR_NAME = "NewDefaultEndpointResolver";
     public static final String AWS_ENDPOINT_RESOLVER_HELPER = "withEndpointResolver";
+    public static final String DUAL_STACK_ENDPOINT_OPTION = "DualStackEndpoint";
 
     private static final String EndpointResolverFromURL = "EndpointResolverFromURL";
     private static final String ENDPOINT_SOURCE_CUSTOM = "EndpointSourceCustom";
@@ -65,11 +67,26 @@ public final class EndpointGenerator implements Runnable {
     private static final String INTERNAL_RESOLVER_NAME = "Resolver";
     private static final String INTERNAL_RESOLVER_OPTIONS_NAME = "Options";
     private static final String INTERNAL_ENDPOINTS_DATA_NAME = "defaultPartitions";
-    private static final List<ResolveConfigField> resolveConfigFields = ListUtils.of(
-            ResolveConfigField.builder()
-                    .name("DisableHTTPS")
+    private static final String DISABLE_HTTPS = "DisableHTTPS";
+
+    // dual-stack related constants
+    private static final String USE_DUAL_STACK_SHARED_OPTION = "UseDualStack";
+    private static final String DUAL_STACK_ENDPOINT_TYPE_NAME = DUAL_STACK_ENDPOINT_OPTION;
+    private static final String USE_DUAL_STACK_SHARED_CONFIG_RESOLVER = "isDualStackEndpointEnabled";
+
+    private static final List<EndpointOption> ENDPOINT_OPTIONS = ListUtils.of(
+            EndpointOption.builder()
+                    .name(DISABLE_HTTPS)
                     .type(SymbolUtils.createValueSymbolBuilder("bool").build())
                     .shared(true)
+                    .build(),
+            EndpointOption.builder()
+                    .name(DUAL_STACK_ENDPOINT_OPTION)
+                    .type(SymbolUtils.createValueSymbolBuilder(DUAL_STACK_ENDPOINT_TYPE_NAME,
+                            AwsGoDependency.AWS_CORE).build())
+                    .shared(true)
+                    .sharedOptionName(USE_DUAL_STACK_SHARED_OPTION)
+                    .sharedResolver(SymbolUtils.createValueSymbolBuilder(USE_DUAL_STACK_SHARED_CONFIG_RESOLVER).build())
                     .build()
     );
 
@@ -176,7 +193,6 @@ public final class EndpointGenerator implements Runnable {
                         });
                     });
         }
-
     }
 
     private void generateInternalModelHelpers(GoWriter writer) {
@@ -185,14 +201,29 @@ public final class EndpointGenerator implements Runnable {
     }
 
     private void generateDNSSuffixFunction(GoWriter writer) {
+        Symbol optionsSymbol = getInternalEndpointsSymbol(INTERNAL_RESOLVER_OPTIONS_NAME, false).build();
+
         writer.addUseImports(SmithyGoDependency.FMT);
         writer.writeDocs("GetDNSSuffix returns the dnsSuffix URL component for the given partition id");
-        writer.openBlock("func GetDNSSuffix(id string) (string, error) {", "}", () -> {
+        writer.openBlock("func GetDNSSuffix(id string, options $T) (string, error) {", "}", optionsSymbol, () -> {
             Symbol equalFold = SymbolUtils.createValueSymbolBuilder("EqualFold", SmithyGoDependency.STRINGS)
                     .build();
+
+            Symbol dualStackEnable = DualStackEndpointConstant.ENABLE.getSymbol();
+
             writer.openBlock("switch {", "}", () -> {
                 partitions.forEach((s, partition) -> {
                     writer.openBlock("case $T(id, $S):", "", equalFold, partition.id, () -> {
+                        writer.openBlock("if options.$L == $T {", "}", DUAL_STACK_ENDPOINT_OPTION, dualStackEnable,
+                                () -> {
+                                    Optional<String> suffix = partition.getDualStackDnsSuffix();
+                                    if (suffix.isPresent()) {
+                                        writer.write("return $S, nil", suffix.get());
+                                    } else {
+                                        writer.write("return \"\", fmt.Errorf(\"partition $L does not have a "
+                                                + "dual-stack dns suffix\")", partition.id);
+                                    }
+                                });
                         writer.write("return $S, nil", partition.dnsSuffix);
                     });
                 });
@@ -203,19 +234,35 @@ public final class EndpointGenerator implements Runnable {
     }
 
     private void generateDNSSuffixFromRegionFunction(GoWriter writer) {
+        Symbol optionsSymbol = getInternalEndpointsSymbol(INTERNAL_RESOLVER_OPTIONS_NAME, false).build();
+
         writer.addUseImports(SmithyGoDependency.FMT);
         writer.writeDocs("GetDNSSuffixFromRegion returns the dnsSuffix URL component for the given partition id");
-        writer.openBlock("func GetDNSSuffixFromRegion(region string) (string, error) {", "}", () -> {
-            writer.openBlock("switch {", "}", () -> {
-                getSortedPartitions().forEach(partition -> {
-                    writer.openBlock("case partitionRegexp.$L.MatchString(region):", "",
-                            getPartitionIDFieldName(partition.getId()), () -> {
-                                writer.write("return $S, nil", partition.dnsSuffix);
-                            });
+        writer.openBlock("func GetDNSSuffixFromRegion(region string, options $T) (string, error) {", "}", optionsSymbol,
+                () -> {
+                    Symbol dualStackEnable = DualStackEndpointConstant.ENABLE.getSymbol();
+
+                    writer.openBlock("switch {", "}", () -> {
+                        getSortedPartitions().forEach(partition -> {
+                            writer.openBlock("case partitionRegexp.$L.MatchString(region):", "",
+                                    getPartitionIDFieldName(partition.getId()), () -> {
+                                        writer.openBlock("if options.$L == $T {", "}", DUAL_STACK_ENDPOINT_OPTION,
+                                                dualStackEnable, () -> {
+                                                    Optional<String> suffix = partition.getDualStackDnsSuffix();
+                                                    if (suffix.isPresent()) {
+                                                        writer.write("return $S, nil", suffix.get());
+                                                    } else {
+                                                        writer.write("return \"\", fmt.Errorf(\"partition $L does not "
+                                                                + "have a dual-stack dns suffix\")", partition.id);
+                                                    }
+                                                });
+                                        writer.write("return $S, nil", partition.dnsSuffix);
+                                    });
+                        });
+                        writer.openBlock("default:", "", () ->
+                                writer.write("return \"\", fmt.Errorf(\"unknown region partition\")"));
+                    });
                 });
-                writer.openBlock("default:", "", () -> writer.write("return \"\", fmt.Errorf(\"unknown region partition\")"));
-            });
-        });
         writer.write("");
     }
 
@@ -281,11 +328,25 @@ public final class EndpointGenerator implements Runnable {
             writer.addUseImports(SmithyGoDependency.SMITHY_MIDDLEWARE);
             String closeBlock = String.format("}, \"%s\", middleware.Before)",
                     ProtocolUtils.OPERATION_SERIALIZER_MIDDLEWARE_ID);
+            writer.write("endpointOptions := o.EndpointOptions");
+            if (S3ModelUtils.isServiceS3(model, serviceShape) || S3ModelUtils.isServiceS3Control(model, serviceShape)) {
+                writer.openBlock("if o.EndpointOptions.$L == $T {", "}", DUAL_STACK_ENDPOINT_OPTION,
+                        DualStackEndpointConstant.UNSET.getSymbol(), () -> {
+                            writer.openBlock("if o.UseDualstack {", "", () -> {
+                                writer.write("endpointOptions.$L = $T", DUAL_STACK_ENDPOINT_OPTION,
+                                        DualStackEndpointConstant.ENABLE.getSymbol());
+                                writer.openBlock("} else {", "}", () -> {
+                                    writer.write("endpointOptions.$L = $T", DUAL_STACK_ENDPOINT_OPTION,
+                                            DualStackEndpointConstant.DISABLE.getSymbol());
+                                });
+                            });
+                        });
+            }
             writer.openBlock("return stack.Serialize.Insert(&$T{", closeBlock,
                     middleware.getMiddlewareSymbol(),
                     () -> {
                         writer.write("Resolver: o.EndpointResolver,");
-                        writer.write("Options: o.EndpointOptions,");
+                        writer.write("Options: endpointOptions,");
                     });
         });
         writer.write("");
@@ -480,7 +541,7 @@ public final class EndpointGenerator implements Runnable {
     ) {
         Symbol awsEndpointSymbol = SymbolUtils.createValueSymbolBuilder("Endpoint", AwsGoDependency.AWS_CORE).build();
         writer.openBlock("func ($L $P) ResolveEndpoint(region string, options $T) (endpoint $T, err error) {", "}",
-                receiverIdentifier, receiverType, resolverOptionsSymbol, awsEndpointSymbol, body::run)
+                        receiverIdentifier, receiverType, resolverOptionsSymbol, awsEndpointSymbol, body::run)
                 .write("");
     }
 
@@ -490,10 +551,16 @@ public final class EndpointGenerator implements Runnable {
         writer.writeDocs(String.format("%s is the endpoint resolver configuration options",
                 resolverOptionsSymbol.getName()));
         writer.openBlock("type $T struct {", "}", resolverOptionsSymbol, () -> {
-            resolveConfigFields.forEach(field -> {
-                writer.write("$L $T", field.getName(), field.getType());
+            ENDPOINT_OPTIONS.forEach(field -> {
+                writer.write("$L $P", field.getName(), field.getType());
             });
         });
+        writer.write("");
+
+        writer.openBlock("func " + USE_DUAL_STACK_SHARED_CONFIG_RESOLVER + "(value $T) bool {", "}",
+                SymbolUtils.createValueSymbolBuilder(DUAL_STACK_ENDPOINT_TYPE_NAME, AwsGoDependency.AWS_CORE)
+                        .build(),
+                () -> writer.write("return value == $T", DualStackEndpointConstant.ENABLE.getSymbol()));
         writer.write("");
 
         // Resolver
@@ -518,8 +585,14 @@ public final class EndpointGenerator implements Runnable {
             Symbol sharedOptions = SymbolUtils.createPointableSymbolBuilder("Options",
                     AwsGoDependency.AWS_ENDPOINTS).build();
             writer.openBlock("opt := $T{", "}", sharedOptions, () -> {
-                resolveConfigFields.stream().filter(ResolveConfigField::isShared).forEach(field -> {
-                    writer.write("$L: options.$L,", field.getName(), field.getName());
+                ENDPOINT_OPTIONS.stream().filter(EndpointOption::isShared).forEach(field -> {
+                    String internalName = field.getSharedOptionName().orElse(field.getName());
+                    Optional<Symbol> resolver = field.getSharedResolver();
+                    if (resolver.isPresent()) {
+                        writer.write("$L: $T(options.$L),", internalName, resolver.get(), field.getName());
+                    } else {
+                        writer.write("$L: options.$L,", internalName, field.getName());
+                    }
                 });
             });
             writer.write("return r.partitions.ResolveEndpoint(region, opt)");
@@ -599,6 +672,10 @@ public final class EndpointGenerator implements Runnable {
         writer.openBlock("Defaults: $T{", "},", endpointSymbol,
                 () -> writeEndpoint(writer, partition.getDefaults()));
 
+        Optional<ObjectNode> dualStackDefaults = partition.getDualStackDefaults();
+        dualStackDefaults.ifPresent(objectNode -> writer.openBlock("DualStackDefaults: $T{", "},", endpointSymbol,
+                () -> writeEndpoint(writer, objectNode)));
+
         writer.addUseImports(AwsGoDependency.REGEXP);
         writer.write("RegionRegex: partitionRegexp.$L,", getPartitionIDFieldName(partition.getId()));
 
@@ -611,10 +688,23 @@ public final class EndpointGenerator implements Runnable {
         Map<StringNode, Node> endpoints = partition.getEndpoints().getMembers();
         if (endpoints.size() > 0) {
             Symbol endpointsSymbol = SymbolUtils.createPointableSymbolBuilder("Endpoints",
-                    AwsGoDependency.AWS_ENDPOINTS)
+                            AwsGoDependency.AWS_ENDPOINTS)
                     .build();
             writer.openBlock("Endpoints: $T{", "},", endpointsSymbol, () -> {
                 endpoints.forEach((s, n) -> {
+                    writer.openBlock("$S: $T{", "},", s, endpointSymbol,
+                            () -> writeEndpoint(writer, n.expectObjectNode()));
+                });
+            });
+        }
+
+        Map<StringNode, Node> dualStackEndpoints = partition.getDualStackEndpoints().getMembers();
+        if (dualStackEndpoints.size() > 0) {
+            Symbol endpointsSymbol = SymbolUtils.createPointableSymbolBuilder("Endpoints",
+                            AwsGoDependency.AWS_ENDPOINTS)
+                    .build();
+            writer.openBlock(DUAL_STACK_ENDPOINT_TYPE_NAME + "s: $T{", "},", endpointsSymbol, () -> {
+                dualStackEndpoints.forEach((s, n) -> {
                     writer.openBlock("$S: $T{", "},", s, endpointSymbol,
                             () -> writeEndpoint(writer, n.expectObjectNode()));
                 });
@@ -641,7 +731,7 @@ public final class EndpointGenerator implements Runnable {
         node.getMember("credentialScope").ifPresent(n -> {
             ObjectNode credentialScope = n.expectObjectNode();
             Symbol credentialScopeSymbol = SymbolUtils.createValueSymbolBuilder("CredentialScope",
-                    AwsGoDependency.AWS_ENDPOINTS)
+                            AwsGoDependency.AWS_ENDPOINTS)
                     .build();
             writer.openBlock("CredentialScope: $T{", "},", credentialScopeSymbol, () -> {
                 credentialScope.getStringMember("region").ifPresent(nn -> {
@@ -654,12 +744,16 @@ public final class EndpointGenerator implements Runnable {
         });
     }
 
-    private static class ResolveConfigField extends ConfigField {
+    private static class EndpointOption extends ConfigField {
         private final boolean shared;
+        private final String sharedOptionName;
+        private final Symbol sharedResolver;
 
-        public ResolveConfigField(Builder builder) {
+        public EndpointOption(Builder builder) {
             super(builder);
             this.shared = builder.shared;
+            this.sharedOptionName = builder.sharedOptionName;
+            this.sharedResolver = builder.sharedResolver;
         }
 
         public static Builder builder() {
@@ -670,8 +764,18 @@ public final class EndpointGenerator implements Runnable {
             return shared;
         }
 
+        public Optional<String> getSharedOptionName() {
+            return Optional.ofNullable(sharedOptionName);
+        }
+
+        public Optional<Symbol> getSharedResolver() {
+            return Optional.ofNullable(this.sharedResolver);
+        }
+
         private static class Builder extends ConfigField.Builder {
             private boolean shared;
+            private String sharedOptionName;
+            private Symbol sharedResolver;
 
             public Builder() {
                 super();
@@ -688,9 +792,19 @@ public final class EndpointGenerator implements Runnable {
                 return this;
             }
 
+            public Builder sharedOptionName(String sharedOptionName) {
+                this.sharedOptionName = sharedOptionName;
+                return this;
+            }
+
+            public Builder sharedResolver(Symbol sharedResolver) {
+                this.sharedResolver = sharedResolver;
+                return this;
+            }
+
             @Override
-            public ResolveConfigField build() {
-                return new ResolveConfigField(this);
+            public EndpointOption build() {
+                return new EndpointOption(this);
             }
 
             @Override
@@ -714,29 +828,60 @@ public final class EndpointGenerator implements Runnable {
     }
 
     private final class Partition {
+        private static final String DEFAULTS_KEY = "defaults";
+        private static final String DUAL_STACK_DEFAULTS_KEY = "dualstackDefaults";
+        private static final String DNS_SUFFIX_KEY = "dnsSuffix";
+        private static final String DUAL_STACK_DNS_SUFFIX_KEY = "dualstackDnsSuffix";
+        public static final String HOSTNAME_KEY = "hostname";
+
         private final String id;
         private final ObjectNode defaults;
+        private final ObjectNode dualStackDefaults;
         private final ObjectNode config;
         private final String dnsSuffix;
+        private final String dualStackDnsSuffix;
 
         private Partition(ObjectNode config, String partition) {
             id = partition;
             this.config = config;
 
             // Resolve the partition defaults + the service defaults.
-            ObjectNode serviceDefaults = config.expectObjectMember("defaults").merge(getService()
-                    .getObjectMember("defaults")
+            ObjectNode service = getService();
+
+            ObjectNode serviceDefaults = config.expectObjectMember(DEFAULTS_KEY).merge(service
+                    .getObjectMember(DEFAULTS_KEY)
                     .orElse(Node.objectNode()));
 
+            ObjectNode serviceDualStackDefaults = config.getObjectMember(DUAL_STACK_DEFAULTS_KEY)
+                    .orElse(Node.objectNode()).merge(service
+                            .getObjectMember(DUAL_STACK_DEFAULTS_KEY)
+                            .orElse(Node.objectNode()));
+
             // Resolve the hostnameTemplate to use for this service in this partition.
-            String hostnameTemplate = serviceDefaults.expectStringMember("hostname").getValue();
+            this.dnsSuffix = config.expectStringMember(DNS_SUFFIX_KEY).getValue();
+
+            String hostnameTemplate = serviceDefaults.expectStringMember(HOSTNAME_KEY).getValue();
             hostnameTemplate = hostnameTemplate.replace("{service}", endpointPrefix);
             hostnameTemplate = hostnameTemplate.replace("{dnsSuffix}",
-                    config.expectStringMember("dnsSuffix").getValue());
+                    config.expectStringMember(DNS_SUFFIX_KEY).getValue());
 
             this.defaults = serviceDefaults.withMember("hostname", hostnameTemplate);
 
-            dnsSuffix = config.expectStringMember("dnsSuffix").getValue();
+            if (serviceDualStackDefaults.size() > 0) {
+                // Resolve the dual-stack hostnameTemplate to use for this service in this partition.
+                this.dualStackDnsSuffix = service.getStringMember(DUAL_STACK_DNS_SUFFIX_KEY)
+                        .orElse(config.expectStringMember(DUAL_STACK_DNS_SUFFIX_KEY)).getValue();
+
+                String dualStackhostnameTemplate = serviceDualStackDefaults.expectStringMember("hostname").getValue();
+                dualStackhostnameTemplate = dualStackhostnameTemplate.replace("{service}", endpointPrefix);
+                dualStackhostnameTemplate = dualStackhostnameTemplate.replace("{dualstackDnsSuffix}",
+                        this.dualStackDnsSuffix);
+
+                this.dualStackDefaults = serviceDualStackDefaults.withMember(HOSTNAME_KEY, dualStackhostnameTemplate);
+            } else {
+                this.dualStackDefaults = null;
+                this.dualStackDnsSuffix = null;
+            }
         }
 
         /**
@@ -746,6 +891,10 @@ public final class EndpointGenerator implements Runnable {
             return defaults;
         }
 
+        Optional<ObjectNode> getDualStackDefaults() {
+            return Optional.ofNullable(dualStackDefaults);
+        }
+
         ObjectNode getService() {
             ObjectNode services = config.getObjectMember("services").orElse(Node.objectNode());
             return services.getObjectMember(endpointPrefix).orElse(Node.objectNode());
@@ -753,6 +902,10 @@ public final class EndpointGenerator implements Runnable {
 
         ObjectNode getEndpoints() {
             return getService().getObjectMember("endpoints").orElse(Node.objectNode());
+        }
+
+        ObjectNode getDualStackEndpoints() {
+            return getService().getObjectMember("dualstackEndpoints").orElse(Node.objectNode());
         }
 
         Optional<String> getPartitionEndpoint() {
@@ -769,6 +922,14 @@ public final class EndpointGenerator implements Runnable {
 
         public ObjectNode getConfig() {
             return config;
+        }
+
+        public String getDnsSuffix() {
+            return dnsSuffix;
+        }
+
+        public Optional<String> getDualStackDnsSuffix() {
+            return Optional.ofNullable(dualStackDnsSuffix);
         }
     }
 
@@ -823,6 +984,30 @@ public final class EndpointGenerator implements Runnable {
         @Override
         public EndpointGenerator build() {
             return new EndpointGenerator(this);
+        }
+    }
+
+    enum DualStackEndpointConstant {
+        UNSET(DUAL_STACK_ENDPOINT_TYPE_NAME + "Unset"),
+        ENABLE(DUAL_STACK_ENDPOINT_TYPE_NAME + "Enabled"),
+        DISABLE(DUAL_STACK_ENDPOINT_TYPE_NAME + "Disabled");
+
+        public static final String DOCUMENTATION = DUAL_STACK_ENDPOINT_TYPE_NAME + " is a constant to describe the "
+                + "dual-stack endpoint resolution behavior.";
+
+        private final String constantName;
+
+        DualStackEndpointConstant(String name) {
+            this.constantName = name;
+        }
+
+        public String getConstantName() {
+            return constantName;
+        }
+
+        public Symbol getSymbol() {
+            return SymbolUtils.createValueSymbolBuilder(getConstantName(), AwsGoDependency.AWS_CORE)
+                    .build();
         }
     }
 }
