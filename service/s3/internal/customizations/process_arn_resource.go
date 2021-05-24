@@ -251,8 +251,15 @@ func buildAccessPointRequest(ctx context.Context, options accesspointOptions) (c
 
 	resolveService := tv.Service
 
+	eo := options.EndpointResolverOptions
+	if options.UseDualstack {
+		eo.DualStackEndpoint = aws.DualStackEndpointEnabled
+	} else {
+		eo.DualStackEndpoint = aws.DualStackEndpointDisabled
+	}
+
 	// resolve endpoint
-	endpoint, err := options.EndpointResolver.ResolveEndpoint(resolveRegion, options.EndpointResolverOptions)
+	endpoint, err := options.EndpointResolver.ResolveEndpoint(resolveRegion, eo)
 	if err != nil {
 		return ctx, s3shared.NewFailedToResolveEndpointError(
 			tv,

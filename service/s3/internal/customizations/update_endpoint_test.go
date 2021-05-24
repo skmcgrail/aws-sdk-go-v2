@@ -38,28 +38,28 @@ func TestUpdateEndpointBuild(t *testing.T) {
 			"PathStyleBucket": {
 				usePathStyle: true,
 				tests: []s3BucketTest{
-					{"abc", "key", "https://s3.mock-region.amazonaws.com/abc/key?x-id=GetObject", ""},
-					{"a$b$c", "key", "https://s3.mock-region.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
-					{"a.b.c", "key", "https://s3.mock-region.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
-					{"a..bc", "key", "https://s3.mock-region.amazonaws.com/a..bc/key?x-id=GetObject", ""},
-					{"abc", "k:e,y", "https://s3.mock-region.amazonaws.com/abc/k%3Ae%2Cy?x-id=GetObject", ""},
+					{"abc", "key", "https://s3.us-west-2.amazonaws.com/abc/key?x-id=GetObject", ""},
+					{"a$b$c", "key", "https://s3.us-west-2.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
+					{"a.b.c", "key", "https://s3.us-west-2.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
+					{"a..bc", "key", "https://s3.us-west-2.amazonaws.com/a..bc/key?x-id=GetObject", ""},
+					{"abc", "k:e,y", "https://s3.us-west-2.amazonaws.com/abc/k%3Ae%2Cy?x-id=GetObject", ""},
 				},
 			},
 			"VirtualHostStyleBucket": {
 				tests: []s3BucketTest{
-					{"abc", "key", "https://abc.s3.mock-region.amazonaws.com/key?x-id=GetObject", ""},
-					{"a$b$c", "key", "https://s3.mock-region.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
-					{"a.b.c", "key", "https://s3.mock-region.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
-					{"a..bc", "key", "https://s3.mock-region.amazonaws.com/a..bc/key?x-id=GetObject", ""},
-					{"abc", "k:e,y", "https://abc.s3.mock-region.amazonaws.com/k%3Ae%2Cy?x-id=GetObject", ""},
+					{"abc", "key", "https://abc.s3.us-west-2.amazonaws.com/key?x-id=GetObject", ""},
+					{"a$b$c", "key", "https://s3.us-west-2.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
+					{"a.b.c", "key", "https://s3.us-west-2.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
+					{"a..bc", "key", "https://s3.us-west-2.amazonaws.com/a..bc/key?x-id=GetObject", ""},
+					{"abc", "k:e,y", "https://abc.s3.us-west-2.amazonaws.com/k%3Ae%2Cy?x-id=GetObject", ""},
 				},
 			},
 			"Accelerate": {
 				useAccelerate: true,
 				tests: []s3BucketTest{
 					{"abc", "key", "https://abc.s3-accelerate.amazonaws.com/key?x-id=GetObject", ""},
-					{"a.b.c", "key", "https://s3.mock-region.amazonaws.com/a.b.c/key?x-id=GetObject", "not compatible"},
-					{"a$b$c", "key", "https://s3.mock-region.amazonaws.com/a%24b%24c/key?x-id=GetObject", "not compatible"},
+					{"a.b.c", "key", "https://s3.us-west-2.amazonaws.com/a.b.c/key?x-id=GetObject", "not compatible"},
+					{"a$b$c", "key", "https://s3.us-west-2.amazonaws.com/a%24b%24c/key?x-id=GetObject", "not compatible"},
 				},
 			},
 			"AccelerateNoSSLTests": {
@@ -68,24 +68,24 @@ func TestUpdateEndpointBuild(t *testing.T) {
 				tests: []s3BucketTest{
 					{"abc", "key", "http://abc.s3-accelerate.amazonaws.com/key?x-id=GetObject", ""},
 					{"a.b.c", "key", "http://a.b.c.s3-accelerate.amazonaws.com/key?x-id=GetObject", ""},
-					{"a$b$c", "key", "http://s3.mock-region.amazonaws.com/a%24b%24c/key?x-id=GetObject", "not compatible"},
+					{"a$b$c", "key", "http://s3.us-west-2.amazonaws.com/a%24b%24c/key?x-id=GetObject", "not compatible"},
 				},
 			},
 			"DualStack": {
 				useDualstack: true,
 				tests: []s3BucketTest{
-					{"abc", "key", "https://abc.s3.dualstack.mock-region.amazonaws.com/key?x-id=GetObject", ""},
-					{"a.b.c", "key", "https://s3.dualstack.mock-region.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
-					{"a$b$c", "key", "https://s3.dualstack.mock-region.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
+					{"abc", "key", "https://abc.s3.dualstack.us-west-2.amazonaws.com/key?x-id=GetObject", ""},
+					{"a.b.c", "key", "https://s3.dualstack.us-west-2.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
+					{"a$b$c", "key", "https://s3.dualstack.us-west-2.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
 				},
 			},
 			"DualStackWithPathStyle": {
 				useDualstack: true,
 				usePathStyle: true,
 				tests: []s3BucketTest{
-					{"abc", "key", "https://s3.dualstack.mock-region.amazonaws.com/abc/key?x-id=GetObject", ""},
-					{"a.b.c", "key", "https://s3.dualstack.mock-region.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
-					{"a$b$c", "key", "https://s3.dualstack.mock-region.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
+					{"abc", "key", "https://s3.dualstack.us-west-2.amazonaws.com/abc/key?x-id=GetObject", ""},
+					{"a.b.c", "key", "https://s3.dualstack.us-west-2.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
+					{"a$b$c", "key", "https://s3.dualstack.us-west-2.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
 				},
 			},
 			"AccelerateWithDualStack": {
@@ -93,8 +93,8 @@ func TestUpdateEndpointBuild(t *testing.T) {
 				useDualstack:  true,
 				tests: []s3BucketTest{
 					{"abc", "key", "https://abc.s3-accelerate.dualstack.amazonaws.com/key?x-id=GetObject", ""},
-					{"a.b.c", "key", "https://s3.dualstack.mock-region.amazonaws.com/a.b.c/key?x-id=GetObject", "not compatible"},
-					{"a$b$c", "key", "https://s3.dualstack.mock-region.amazonaws.com/a%24b%24c/key?x-id=GetObject", "not compatible"},
+					{"a.b.c", "key", "https://s3.dualstack.us-west-2.amazonaws.com/a.b.c/key?x-id=GetObject", "not compatible"},
+					{"a$b$c", "key", "https://s3.dualstack.us-west-2.amazonaws.com/a%24b%24c/key?x-id=GetObject", "not compatible"},
 				},
 			},
 		},
@@ -153,18 +153,6 @@ func TestUpdateEndpointBuild(t *testing.T) {
 					{"a$b$c", "key", "https://example.region.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
 				},
 			},
-			"DualStack": {
-				useDualstack: true,
-				customEndpoint: &aws.Endpoint{
-					URL:               "https://example.region.amazonaws.com",
-					HostnameImmutable: true,
-				},
-				tests: []s3BucketTest{
-					{"abc", "key", "https://example.region.amazonaws.com/abc/key?x-id=GetObject", ""},
-					{"a.b.c", "key", "https://example.region.amazonaws.com/a.b.c/key?x-id=GetObject", ""},
-					{"a$b$c", "key", "https://example.region.amazonaws.com/a%24b%24c/key?x-id=GetObject", ""},
-				},
-			},
 		},
 	}
 
@@ -175,7 +163,7 @@ func TestUpdateEndpointBuild(t *testing.T) {
 					options := s3.Options{
 						Credentials: unit.StubCredentialsProvider{},
 						Retryer:     aws.NopRetryer{},
-						Region:      "mock-region",
+						Region:      "us-west-2",
 
 						HTTPClient: smithyhttp.NopClient{},
 
@@ -859,6 +847,9 @@ func TestEndpointWithARN(t *testing.T) {
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
 			runValidations(t, c, func(ctx context.Context, svc *s3.Client, fm *requestRetrieverMiddleware) (interface{}, error) {
+				if c.operation != nil {
+					return c.operation(ctx, svc, fm)
+				}
 				return svc.GetObject(ctx, &s3.GetObjectInput{
 					Bucket: ptr.String(c.bucket),
 					Key:    ptr.String("testkey"),
@@ -1106,6 +1097,74 @@ func TestWriteGetObjectResponse_UpdateEndpoint(t *testing.T) {
 					&s3.WriteGetObjectResponseInput{
 						RequestRoute: aws.String("test-route"),
 						RequestToken: aws.String("test-token"),
+					}, addRequestRetriever(retrieverMiddleware))
+			})
+		})
+	}
+}
+
+func TestUseDualStackClientBehavior(t *testing.T) {
+	cases := map[string]testCaseForEndpointCustomization{
+		"client options dual-stack false, endpoint resolver dual-stack unset": {
+			options: s3.Options{
+				Region:       "us-west-2",
+				UseDualstack: false,
+			},
+			expectedReqURL:        "https://test-bucket.s3.us-west-2.amazonaws.com/test-key?x-id=GetObject",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+		"client options dual-stack true, endpoint resolver dual-stack unset": {
+			options: s3.Options{
+				Region:       "us-west-2",
+				UseDualstack: true,
+			},
+			expectedReqURL:        "https://test-bucket.s3.dualstack.us-west-2.amazonaws.com/test-key?x-id=GetObject",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+		"client options dual-stack off, endpoint resolver dual-stack disabled": {
+			options: s3.Options{
+				Region: "us-west-2",
+				EndpointOptions: s3.EndpointResolverOptions{
+					DualStackEndpoint: aws.DualStackEndpointDisabled,
+				},
+			},
+			expectedReqURL:        "https://test-bucket.s3.us-west-2.amazonaws.com/test-key?x-id=GetObject",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+		"client options dual-stack off, endpoint resolver dual-stack enabled": {
+			options: s3.Options{
+				Region: "us-west-2",
+				EndpointOptions: s3.EndpointResolverOptions{
+					DualStackEndpoint: aws.DualStackEndpointEnabled,
+				},
+			},
+			expectedReqURL:        "https://test-bucket.s3.dualstack.us-west-2.amazonaws.com/test-key?x-id=GetObject",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+		"client options dual-stack on, endpoint resolver dual-stack disabled": {
+			options: s3.Options{
+				Region:       "us-west-2",
+				UseDualstack: true,
+				EndpointOptions: s3.EndpointResolverOptions{
+					DualStackEndpoint: aws.DualStackEndpointDisabled,
+				},
+			},
+			expectedReqURL:        "https://test-bucket.s3.us-west-2.amazonaws.com/test-key?x-id=GetObject",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+	}
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			runValidations(t, tt, func(ctx context.Context, client *s3.Client, retrieverMiddleware *requestRetrieverMiddleware) (interface{}, error) {
+				return client.GetObject(context.Background(),
+					&s3.GetObjectInput{
+						Bucket: aws.String("test-bucket"),
+						Key:    aws.String("test-key"),
 					}, addRequestRetriever(retrieverMiddleware))
 			})
 		})
