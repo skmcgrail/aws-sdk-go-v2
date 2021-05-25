@@ -7,14 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aws/smithy-go/ptr"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsmiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/internal/awstesting/unit"
 	"github.com/aws/aws-sdk-go-v2/service/s3control"
-
 	"github.com/aws/smithy-go/middleware"
+	"github.com/aws/smithy-go/ptr"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 )
 
@@ -34,35 +32,23 @@ func TestUpdateEndpointBuild(t *testing.T) {
 		"default endpoint": {
 			"default": {
 				tests: []s3controlEndpointTest{
-					{"abc", "123456789012", "https://123456789012.s3-control.mock-region.amazonaws.com/v20180820/bucket/abc", ""},
-					{"a.b.c", "123456789012", "https://123456789012.s3-control.mock-region.amazonaws.com/v20180820/bucket/a.b.c", ""},
-					{"a$b$c", "123456789012", "https://123456789012.s3-control.mock-region.amazonaws.com/v20180820/bucket/a%24b%24c", ""},
+					{"abc", "123456789012", "https://123456789012.s3-control.us-west-2.amazonaws.com/v20180820/bucket/abc", ""},
+					{"a.b.c", "123456789012", "https://123456789012.s3-control.us-west-2.amazonaws.com/v20180820/bucket/a.b.c", ""},
+					{"a$b$c", "123456789012", "https://123456789012.s3-control.us-west-2.amazonaws.com/v20180820/bucket/a%24b%24c", ""},
 				},
 			},
 			"DualStack": {
 				useDualstack: true,
 				tests: []s3controlEndpointTest{
-					{"abc", "123456789012", "https://123456789012.s3-control.dualstack.mock-region.amazonaws.com/v20180820/bucket/abc", ""},
-					{"a.b.c", "123456789012", "https://123456789012.s3-control.dualstack.mock-region.amazonaws.com/v20180820/bucket/a.b.c", ""},
-					{"a$b$c", "123456789012", "https://123456789012.s3-control.dualstack.mock-region.amazonaws.com/v20180820/bucket/a%24b%24c", ""},
+					{"abc", "123456789012", "https://123456789012.s3-control.dualstack.us-west-2.amazonaws.com/v20180820/bucket/abc", ""},
+					{"a.b.c", "123456789012", "https://123456789012.s3-control.dualstack.us-west-2.amazonaws.com/v20180820/bucket/a.b.c", ""},
+					{"a$b$c", "123456789012", "https://123456789012.s3-control.dualstack.us-west-2.amazonaws.com/v20180820/bucket/a%24b%24c", ""},
 				},
 			},
 		},
 
 		"immutable endpoint": {
 			"default": {
-				customEndpoint: &aws.Endpoint{
-					URL:               "https://example.region.amazonaws.com",
-					HostnameImmutable: true,
-				},
-				tests: []s3controlEndpointTest{
-					{"abc", "123456789012", "https://example.region.amazonaws.com/v20180820/bucket/abc", ""},
-					{"a.b.c", "123456789012", "https://example.region.amazonaws.com/v20180820/bucket/a.b.c", ""},
-					{"a$b$c", "123456789012", "https://example.region.amazonaws.com/v20180820/bucket/a%24b%24c", ""},
-				},
-			},
-			"DualStack": {
-				useDualstack: true,
 				customEndpoint: &aws.Endpoint{
 					URL:               "https://example.region.amazonaws.com",
 					HostnameImmutable: true,
@@ -84,7 +70,7 @@ func TestUpdateEndpointBuild(t *testing.T) {
 					options := s3control.Options{
 						Credentials: unit.StubCredentialsProvider{},
 						Retryer:     aws.NopRetryer{},
-						Region:      "mock-region",
+						Region:      "us-west-2",
 
 						HTTPClient: smithyhttp.NopClient{},
 
@@ -834,6 +820,74 @@ func TestInputIsNotModified(t *testing.T) {
 	}
 	if e, a := "123456789012", modifiedAccountID; !strings.EqualFold(e, a) {
 		t.Fatalf("unexpected diff in account id backfilled from arn, expected %v, got %v", e, a)
+	}
+}
+
+func TestUseDualStackClientBehavior(t *testing.T) {
+	cases := map[string]testCaseForEndpointCustomization{
+		"client options dual-stack false, endpoint resolver dual-stack unset": {
+			options: s3control.Options{
+				Region:       "us-west-2",
+				UseDualstack: false,
+			},
+			expectedReqURL:        "https://012345678901.s3-control.us-west-2.amazonaws.com/v20180820/bucket/test-bucket",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+		"client options dual-stack true, endpoint resolver dual-stack unset": {
+			options: s3control.Options{
+				Region:       "us-west-2",
+				UseDualstack: true,
+			},
+			expectedReqURL:        "https://012345678901.s3-control.dualstack.us-west-2.amazonaws.com/v20180820/bucket/test-bucket",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+		"client options dual-stack off, endpoint resolver dual-stack disabled": {
+			options: s3control.Options{
+				Region: "us-west-2",
+				EndpointOptions: s3control.EndpointResolverOptions{
+					DualStackEndpoint: aws.DualStackEndpointDisabled,
+				},
+			},
+			expectedReqURL:        "https://012345678901.s3-control.us-west-2.amazonaws.com/v20180820/bucket/test-bucket",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+		"client options dual-stack off, endpoint resolver dual-stack enabled": {
+			options: s3control.Options{
+				Region: "us-west-2",
+				EndpointOptions: s3control.EndpointResolverOptions{
+					DualStackEndpoint: aws.DualStackEndpointEnabled,
+				},
+			},
+			expectedReqURL:        "https://012345678901.s3-control.dualstack.us-west-2.amazonaws.com/v20180820/bucket/test-bucket",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+		"client options dual-stack on, endpoint resolver dual-stack disabled": {
+			options: s3control.Options{
+				Region:       "us-west-2",
+				UseDualstack: true,
+				EndpointOptions: s3control.EndpointResolverOptions{
+					DualStackEndpoint: aws.DualStackEndpointDisabled,
+				},
+			},
+			expectedReqURL:        "https://012345678901.s3-control.us-west-2.amazonaws.com/v20180820/bucket/test-bucket",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
+	}
+	for name, tt := range cases {
+		t.Run(name, func(t *testing.T) {
+			tt.operation = func(ctx context.Context, client *s3control.Client, retrieverMiddleware *requestRetrieverMiddleware) (interface{}, error) {
+				return client.GetBucket(ctx, &s3control.GetBucketInput{
+					AccountId: aws.String("012345678901"),
+					Bucket:    aws.String("test-bucket"),
+				}, addRequestRetriever(retrieverMiddleware))
+			}
+			runValidations(t, tt)
+		})
 	}
 }
 
