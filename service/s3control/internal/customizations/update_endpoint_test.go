@@ -877,6 +877,18 @@ func TestUseDualStackClientBehavior(t *testing.T) {
 			expectedSigningRegion: "us-west-2",
 			expectedSigningName:   "s3",
 		},
+		"client options dual-stack off, endpoint resolver dual-stack on": {
+			options: s3control.Options{
+				Region:       "us-west-2",
+				UseDualstack: false,
+				EndpointOptions: s3control.EndpointResolverOptions{
+					DualStackEndpoint: aws.DualStackEndpointEnabled,
+				},
+			},
+			expectedReqURL:        "https://012345678901.s3-control.dualstack.us-west-2.amazonaws.com/v20180820/bucket/test-bucket",
+			expectedSigningRegion: "us-west-2",
+			expectedSigningName:   "s3",
+		},
 	}
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -166,7 +166,7 @@ public class S3UpdateEndpoint implements GoIntegration {
                                                 .build())
                                         .documentation("Allows you to enable dual-stack endpoint support for the "
                                                 + "service.")
-                                        .deprecated("Set dual-stack by setting UseDualStack on "
+                                        .deprecated("Set dual-stack by setting DualStackEndpoint on "
                                                 + "EndpointResolverOptions. When EndpointResolverOptions' UseDualStack "
                                                 + "field is set it overrides this field value.")
                                         .build(),
