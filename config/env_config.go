@@ -187,7 +187,7 @@ type EnvConfig struct {
 	// services.
 	//
 	// AWS_USE_DUALSTACK_ENDPOINT=true
-	UseDualStackEndpoint aws.DualStackEndpoint
+	UseDualStackEndpoint aws.DualStackEndpointState
 }
 
 // loadEnvConfig reads configuration values from the OS's environment variables.
@@ -318,9 +318,9 @@ func (c EnvConfig) GetS3UseARNRegion(ctx context.Context) (value, ok bool, err e
 
 // GetUseDualStackEndpoint returns whether the service's dual-stack endpoint should be
 // used for requests.
-func (c EnvConfig) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpoint, found bool, err error) {
-	if c.UseDualStackEndpoint == aws.DualStackEndpointUnset {
-		return aws.DualStackEndpointUnset, false, nil
+func (c EnvConfig) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpointState, found bool, err error) {
+	if c.UseDualStackEndpoint == aws.DualStackEndpointStateUnset {
+		return aws.DualStackEndpointStateUnset, false, nil
 	}
 
 	return c.UseDualStackEndpoint, true, nil
@@ -385,7 +385,7 @@ func setEndpointDiscoveryTypeFromEnvVal(dst *aws.EndpointDiscoveryEnableState, k
 	return nil
 }
 
-func setUseDualStackEndpointFromEnvVal(dst *aws.DualStackEndpoint, keys []string) error {
+func setUseDualStackEndpointFromEnvVal(dst *aws.DualStackEndpointState, keys []string) error {
 	for _, k := range keys {
 		value := os.Getenv(k)
 		if len(value) == 0 {
@@ -394,12 +394,12 @@ func setUseDualStackEndpointFromEnvVal(dst *aws.DualStackEndpoint, keys []string
 
 		switch {
 		case strings.EqualFold(value, "true"):
-			*dst = aws.DualStackEndpointEnabled
+			*dst = aws.DualStackEndpointStateEnabled
 		case strings.EqualFold(value, "false"):
-			*dst = aws.DualStackEndpointDisabled
+			*dst = aws.DualStackEndpointStateDisabled
 		default:
 			return fmt.Errorf(
-				"invalid value for environment variable, %s=%s, need true, false or auto",
+				"invalid value for environment variable, %s=%s, need true, false",
 				k, value)
 		}
 	}

@@ -40,7 +40,7 @@ public class ResolveClientConfigFromSources implements GoIntegration {
     private static final String RESOLVE_ENABLE_ENDPOINT_DISCOVERY = "ResolveEnableEndpointDiscovery";
 
     // UseDualStack
-    private static final String DUAL_STACK_ENDPOINT_CONFIG_RESOLVER = "resolveDualStackEndpoint";
+    private static final String DUAL_STACK_ENDPOINT_CONFIG_RESOLVER = "resolveUseDualStackEndpoint";
     private static final String RESOLVE_USE_DUAL_STACK = "ResolveUseDualStackEndpoint";
 
     public static final List<AddAwsConfigFields.AwsConfigField> AWS_CONFIG_FIELDS = ListUtils.of(
@@ -62,7 +62,7 @@ public class ResolveClientConfigFromSources implements GoIntegration {
                     .build(),
             // All Clients Except S3 and S3 Control
             AddAwsConfigFields.AwsConfigField.builder()
-                    .name("EndpointOptions.DualStackEndpoint")
+                    .name("EndpointOptions.UseDualStackEndpoint")
                     .type(SymbolUtils.createPointableSymbolBuilder("bool").build())
                     .generatedOnClient(false)
                     .awsResolveFunction(SymbolUtils.createValueSymbolBuilder(DUAL_STACK_ENDPOINT_CONFIG_RESOLVER)
@@ -154,17 +154,7 @@ public class ResolveClientConfigFromSources implements GoIntegration {
                     writer.write("if err != nil { return err }");
 
                     writer.openBlock("if found {", "}", () -> {
-                        if (isS3SharedService(model, serviceShape)) {
-                            writer.openBlock("if value == $T {", "",
-                                    EndpointGenerator.DualStackEndpointConstant.ENABLE.getSymbol(), () -> {
-                                        writer.write("o.UseDualstack = true");
-                                        writer.openBlock("} else {", "}", () -> {
-                                            writer.write("o.UseDualstack = false");
-                                        });
-                                    });
-                        } else {
-                            writer.write("o.EndpointOptions.$L = value", EndpointGenerator.DUAL_STACK_ENDPOINT_OPTION);
-                        }
+                        writer.write("o.EndpointOptions.$L = value", EndpointGenerator.DUAL_STACK_ENDPOINT_OPTION);
                     });
                 });
     }

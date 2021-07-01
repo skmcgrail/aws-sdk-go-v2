@@ -129,7 +129,7 @@ type LoadOptions struct {
 
 	// Specifies that SDK clients must resolve a dual-stack endpoint for
 	// services.
-	UseDualStackEndpoint aws.DualStackEndpoint
+	UseDualStackEndpoint aws.DualStackEndpointState
 }
 
 // getRegion returns Region from config's LoadOptions
@@ -649,7 +649,7 @@ func WithSSOProviderOptions(v func(*ssocreds.Options)) LoadOptionsFunc {
 
 // WithUseDualStackEndpoint is a helper function to construct
 // functional options that can be used to set UseDualStackEndpoint on LoadOptions.
-func WithUseDualStackEndpoint(v aws.DualStackEndpoint) LoadOptionsFunc {
+func WithUseDualStackEndpoint(v aws.DualStackEndpointState) LoadOptionsFunc {
 	return func(o *LoadOptions) error {
 		o.UseDualStackEndpoint = v
 		return nil
@@ -658,9 +658,9 @@ func WithUseDualStackEndpoint(v aws.DualStackEndpoint) LoadOptionsFunc {
 
 // GetUseDualStackEndpoint returns whether the service's dual-stack endpoint should be
 // used for requests.
-func (o LoadOptions) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpoint, found bool, err error) {
-	if o.UseDualStackEndpoint == aws.DualStackEndpointUnset {
-		return aws.DualStackEndpointUnset, false, nil
+func (o LoadOptions) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpointState, found bool, err error) {
+	if o.UseDualStackEndpoint == aws.DualStackEndpointStateUnset {
+		return aws.DualStackEndpointStateUnset, false, nil
 	}
 	return o.UseDualStackEndpoint, true, nil
 }

@@ -55,7 +55,7 @@ public final class EndpointGenerator implements Runnable {
     public static final String CLIENT_CONFIG_RESOLVER = "resolveDefaultEndpointConfiguration";
     public static final String RESOLVER_CONSTRUCTOR_NAME = "NewDefaultEndpointResolver";
     public static final String AWS_ENDPOINT_RESOLVER_HELPER = "withEndpointResolver";
-    public static final String DUAL_STACK_ENDPOINT_OPTION = "DualStackEndpoint";
+    public static final String DUAL_STACK_ENDPOINT_OPTION = "UseDualStackEndpoint";
 
     private static final String EndpointResolverFromURL = "EndpointResolverFromURL";
     private static final String ENDPOINT_SOURCE_CUSTOM = "EndpointSourceCustom";
@@ -71,7 +71,7 @@ public final class EndpointGenerator implements Runnable {
 
     // dual-stack related constants
     private static final String USE_DUAL_STACK_SHARED_OPTION = "UseDualStack";
-    private static final String DUAL_STACK_ENDPOINT_TYPE_NAME = DUAL_STACK_ENDPOINT_OPTION;
+    private static final String DUAL_STACK_ENDPOINT_TYPE_NAME = "DualStackEndpointState";
     private static final String USE_DUAL_STACK_SHARED_CONFIG_RESOLVER = "isDualStackEndpointEnabled";
 
     private static final List<EndpointOption> ENDPOINT_OPTIONS = ListUtils.of(
@@ -703,7 +703,7 @@ public final class EndpointGenerator implements Runnable {
             Symbol endpointsSymbol = SymbolUtils.createPointableSymbolBuilder("Endpoints",
                             AwsGoDependency.AWS_ENDPOINTS)
                     .build();
-            writer.openBlock(DUAL_STACK_ENDPOINT_TYPE_NAME + "s: $T{", "},", endpointsSymbol, () -> {
+            writer.openBlock("DualStackEndpoints: $T{", "},", endpointsSymbol, () -> {
                 dualStackEndpoints.forEach((s, n) -> {
                     writer.openBlock("$S: $T{", "},", s, endpointSymbol,
                             () -> writeEndpoint(writer, n.expectObjectNode()));
@@ -991,9 +991,6 @@ public final class EndpointGenerator implements Runnable {
         UNSET(DUAL_STACK_ENDPOINT_TYPE_NAME + "Unset"),
         ENABLE(DUAL_STACK_ENDPOINT_TYPE_NAME + "Enabled"),
         DISABLE(DUAL_STACK_ENDPOINT_TYPE_NAME + "Disabled");
-
-        public static final String DOCUMENTATION = DUAL_STACK_ENDPOINT_TYPE_NAME + " is a constant to describe the "
-                + "dual-stack endpoint resolution behavior.";
 
         private final String constantName;
 

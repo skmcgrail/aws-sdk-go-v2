@@ -67,8 +67,8 @@ type UpdateEndpointOptions struct {
 
 // IsUseDualStack returns whether dual-stack endpoint resolution is enabled
 func (o UpdateEndpointOptions) IsUseDualStack() bool {
-	if o.EndpointResolverOptions.DualStackEndpoint != aws.DualStackEndpointUnset {
-		return o.EndpointResolverOptions.DualStackEndpoint == aws.DualStackEndpointEnabled
+	if o.EndpointResolverOptions.UseDualStackEndpoint != aws.DualStackEndpointStateUnset {
+		return o.EndpointResolverOptions.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled
 	}
 	return o.UseDualstack
 }

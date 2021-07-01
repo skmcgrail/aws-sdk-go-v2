@@ -4,18 +4,18 @@ import (
 	"fmt"
 )
 
-// DualStackEndpoint is a constant to describe the dual-stack endpoint resolution behavior.
-type DualStackEndpoint uint
+// DualStackEndpointState is a constant to describe the dual-stack endpoint resolution behavior.
+type DualStackEndpointState uint
 
 const (
-	// DualStackEndpointUnset is the default value behavior for dual-stack endpoint resolution.
-	DualStackEndpointUnset DualStackEndpoint = iota
+	// DualStackEndpointStateUnset is the default value behavior for dual-stack endpoint resolution.
+	DualStackEndpointStateUnset DualStackEndpointState = iota
 
-	// DualStackEndpointEnabled enables dual-stack endpoint resolution for service endpoints.
-	DualStackEndpointEnabled
+	// DualStackEndpointStateEnabled enables dual-stack endpoint resolution for service endpoints.
+	DualStackEndpointStateEnabled
 
-	// DualStackEndpointDisabled disables dual-stack endpoint resolution for endpoints.
-	DualStackEndpointDisabled
+	// DualStackEndpointStateDisabled disables dual-stack endpoint resolution for endpoints.
+	DualStackEndpointStateDisabled
 )
 
 // Endpoint represents the endpoint a service client should make API operation

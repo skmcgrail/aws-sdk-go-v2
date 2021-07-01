@@ -1127,7 +1127,7 @@ func TestUseDualStackClientBehavior(t *testing.T) {
 			options: s3.Options{
 				Region: "us-west-2",
 				EndpointOptions: s3.EndpointResolverOptions{
-					DualStackEndpoint: aws.DualStackEndpointDisabled,
+					UseDualStackEndpoint: aws.DualStackEndpointStateDisabled,
 				},
 			},
 			expectedReqURL:        "https://test-bucket.s3.us-west-2.amazonaws.com/test-key?x-id=GetObject",
@@ -1138,7 +1138,7 @@ func TestUseDualStackClientBehavior(t *testing.T) {
 			options: s3.Options{
 				Region: "us-west-2",
 				EndpointOptions: s3.EndpointResolverOptions{
-					DualStackEndpoint: aws.DualStackEndpointEnabled,
+					UseDualStackEndpoint: aws.DualStackEndpointStateEnabled,
 				},
 			},
 			expectedReqURL:        "https://test-bucket.s3.dualstack.us-west-2.amazonaws.com/test-key?x-id=GetObject",
@@ -1150,7 +1150,7 @@ func TestUseDualStackClientBehavior(t *testing.T) {
 				Region:       "us-west-2",
 				UseDualstack: true,
 				EndpointOptions: s3.EndpointResolverOptions{
-					DualStackEndpoint: aws.DualStackEndpointDisabled,
+					UseDualStackEndpoint: aws.DualStackEndpointStateDisabled,
 				},
 			},
 			expectedReqURL:        "https://test-bucket.s3.us-west-2.amazonaws.com/test-key?x-id=GetObject",
@@ -1162,7 +1162,7 @@ func TestUseDualStackClientBehavior(t *testing.T) {
 				Region:       "us-west-2",
 				UseDualstack: false,
 				EndpointOptions: s3.EndpointResolverOptions{
-					DualStackEndpoint: aws.DualStackEndpointEnabled,
+					UseDualStackEndpoint: aws.DualStackEndpointStateEnabled,
 				},
 			},
 			expectedReqURL:        "https://test-bucket.s3.dualstack.us-west-2.amazonaws.com/test-key?x-id=GetObject",

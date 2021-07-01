@@ -160,7 +160,7 @@ type SharedConfig struct {
 	// services.
 	//
 	// use_dualstack_endpoint=true
-	UseDualStackEndpoint aws.DualStackEndpoint
+	UseDualStackEndpoint aws.DualStackEndpointState
 }
 
 // GetS3UseARNRegion returns if the S3 service should allow ARNs to direct the region
@@ -197,9 +197,9 @@ func (c SharedConfig) getCredentialsProvider() (aws.Credentials, bool, error) {
 
 // GetUseDualStackEndpoint returns whether the service's dual-stack endpoint should be
 // used for requests.
-func (c SharedConfig) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpoint, found bool, err error) {
-	if c.UseDualStackEndpoint == aws.DualStackEndpointUnset {
-		return aws.DualStackEndpointUnset, false, nil
+func (c SharedConfig) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpointState, found bool, err error) {
+	if c.UseDualStackEndpoint == aws.DualStackEndpointStateUnset {
+		return aws.DualStackEndpointStateUnset, false, nil
 	}
 
 	return c.UseDualStackEndpoint, true, nil
@@ -1175,13 +1175,13 @@ func updateEndpointDiscoveryType(dst *aws.EndpointDiscoveryEnableState, section 
 
 // updateEndpointDiscoveryType will only update the dst with the value in the section, if
 // a valid key and corresponding EndpointDiscoveryType is found.
-func updateUseDualStackEndpoint(dst *aws.DualStackEndpoint, section ini.Section, key string) {
+func updateUseDualStackEndpoint(dst *aws.DualStackEndpointState, section ini.Section, key string) {
 	if !section.Has(key) {
 		return
 	}
 	if section.Bool(key) {
-		*dst = aws.DualStackEndpointEnabled
+		*dst = aws.DualStackEndpointStateEnabled
 	} else {
-		*dst = aws.DualStackEndpointDisabled
+		*dst = aws.DualStackEndpointStateDisabled
 	}
 }

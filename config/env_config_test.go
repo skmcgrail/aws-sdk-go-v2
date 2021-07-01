@@ -255,7 +255,7 @@ func TestNewEnvConfig(t *testing.T) {
 				"AWS_USE_DUALSTACK_ENDPOINT": "true",
 			},
 			Config: EnvConfig{
-				UseDualStackEndpoint: aws.DualStackEndpointEnabled,
+				UseDualStackEndpoint: aws.DualStackEndpointStateEnabled,
 			},
 		},
 		17: {
@@ -263,7 +263,7 @@ func TestNewEnvConfig(t *testing.T) {
 				"AWS_USE_DUALSTACK_ENDPOINT": "false",
 			},
 			Config: EnvConfig{
-				UseDualStackEndpoint: aws.DualStackEndpointDisabled,
+				UseDualStackEndpoint: aws.DualStackEndpointStateDisabled,
 			},
 		},
 	}

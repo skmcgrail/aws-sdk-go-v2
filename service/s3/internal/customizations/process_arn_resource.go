@@ -253,9 +253,9 @@ func buildAccessPointRequest(ctx context.Context, options accesspointOptions) (c
 
 	eo := options.EndpointResolverOptions
 	if options.UseDualstack {
-		eo.DualStackEndpoint = aws.DualStackEndpointEnabled
+		eo.UseDualStackEndpoint = aws.DualStackEndpointStateEnabled
 	} else {
-		eo.DualStackEndpoint = aws.DualStackEndpointDisabled
+		eo.UseDualStackEndpoint = aws.DualStackEndpointStateDisabled
 	}
 
 	// resolve endpoint
