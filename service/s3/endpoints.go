@@ -112,9 +112,18 @@ func (m *ResolveEndpoint) HandleSerialize(ctx context.Context, in middleware.Ser
 	return next.HandleSerialize(ctx, in)
 }
 func addResolveEndpointMiddleware(stack *middleware.Stack, o Options) error {
+	endpointOptions := o.EndpointOptions
+	if o.EndpointOptions.UseDualStackEndpoint == aws.DualStackEndpointStateUnset {
+		if o.UseDualstack {
+			endpointOptions.UseDualStackEndpoint = aws.DualStackEndpointStateEnabled
+		} else {
+			endpointOptions.UseDualStackEndpoint = aws.DualStackEndpointStateDisabled
+		}
+
+	}
 	return stack.Serialize.Insert(&ResolveEndpoint{
 		Resolver: o.EndpointResolver,
-		Options:  o.EndpointOptions,
+		Options:  endpointOptions,
 	}, "OperationSerializer", middleware.Before)
 }
 

@@ -10,7 +10,12 @@ import (
 
 // Options is the endpoint resolver configuration options
 type Options struct {
-	DisableHTTPS bool
+	DisableHTTPS         bool
+	UseDualStackEndpoint aws.DualStackEndpointState
+}
+
+func isDualStackEndpointEnabled(value aws.DualStackEndpointState) bool {
+	return value == aws.DualStackEndpointStateEnabled
 }
 
 // Resolver Application Insights endpoint resolver
@@ -26,6 +31,7 @@ func (r *Resolver) ResolveEndpoint(region string, options Options) (endpoint aws
 
 	opt := endpoints.Options{
 		DisableHTTPS: options.DisableHTTPS,
+		UseDualStack: isDualStackEndpointEnabled(options.UseDualStackEndpoint),
 	}
 	return r.partitions.ResolveEndpoint(region, opt)
 }
@@ -57,6 +63,11 @@ var defaultPartitions = endpoints.Partitions{
 		ID: "aws",
 		Defaults: endpoints.Endpoint{
 			Hostname:          "applicationinsights.{region}.amazonaws.com",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "applicationinsights.{region}.aws",
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
@@ -92,6 +103,11 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "applicationinsights.{region}.amazonwebservices.com.cn",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:    partitionRegexp.AwsCn,
 		IsRegionalized: true,
 	},
@@ -122,7 +138,26 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "applicationinsights.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:    partitionRegexp.AwsUsGov,
 		IsRegionalized: true,
+		Endpoints: endpoints.Endpoints{
+			"us-gov-east-1": endpoints.Endpoint{
+				Hostname: "applicationinsights.us-gov-east-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-east-1",
+				},
+			},
+			"us-gov-west-1": endpoints.Endpoint{
+				Hostname: "applicationinsights.us-gov-west-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-west-1",
+				},
+			},
+		},
 	},
 }

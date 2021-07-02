@@ -195,6 +195,7 @@ func NewFromConfig(cfg aws.Config, optFns ...func(*Options)) *Client {
 	resolveAWSRetryerProvider(cfg, &opts)
 	resolveAWSEndpointResolver(cfg, &opts)
 	resolveEnableEndpointDiscoveryFromConfigSources(cfg, &opts)
+	resolveUseDualStackEndpoint(cfg, &opts)
 	return New(opts, optFns...)
 }
 
@@ -283,6 +284,21 @@ func resolveEnableEndpointDiscoveryFromConfigSources(cfg aws.Config, o *Options)
 	}
 	if found {
 		o.EndpointDiscovery.EnableEndpointDiscovery = value
+	}
+	return nil
+}
+
+// resolves dual-stack endpoint configuration
+func resolveUseDualStackEndpoint(cfg aws.Config, o *Options) error {
+	if len(cfg.ConfigSources) == 0 {
+		return nil
+	}
+	value, found, err := internalConfig.ResolveUseDualStackEndpoint(context.Background(), cfg.ConfigSources)
+	if err != nil {
+		return err
+	}
+	if found {
+		o.EndpointOptions.UseDualStackEndpoint = value
 	}
 	return nil
 }

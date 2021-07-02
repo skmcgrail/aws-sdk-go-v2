@@ -10,7 +10,12 @@ import (
 
 // Options is the endpoint resolver configuration options
 type Options struct {
-	DisableHTTPS bool
+	DisableHTTPS         bool
+	UseDualStackEndpoint aws.DualStackEndpointState
+}
+
+func isDualStackEndpointEnabled(value aws.DualStackEndpointState) bool {
+	return value == aws.DualStackEndpointStateEnabled
 }
 
 // Resolver S3 Control endpoint resolver
@@ -26,6 +31,7 @@ func (r *Resolver) ResolveEndpoint(region string, options Options) (endpoint aws
 
 	opt := endpoints.Options{
 		DisableHTTPS: options.DisableHTTPS,
+		UseDualStack: isDualStackEndpointEnabled(options.UseDualStackEndpoint),
 	}
 	return r.partitions.ResolveEndpoint(region, opt)
 }
@@ -60,18 +66,16 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"s3v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "s3-control.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:    partitionRegexp.Aws,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
 			"ap-northeast-1": endpoints.Endpoint{
 				Hostname:          "s3-control.ap-northeast-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ap-northeast-1",
-				},
-			},
-			"ap-northeast-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.ap-northeast-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-northeast-1",
@@ -84,22 +88,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "ap-northeast-2",
 				},
 			},
-			"ap-northeast-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.ap-northeast-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ap-northeast-2",
-				},
-			},
 			"ap-northeast-3": endpoints.Endpoint{
 				Hostname:          "s3-control.ap-northeast-3.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ap-northeast-3",
-				},
-			},
-			"ap-northeast-3-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.ap-northeast-3.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-northeast-3",
@@ -112,22 +102,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "ap-south-1",
 				},
 			},
-			"ap-south-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.ap-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ap-south-1",
-				},
-			},
 			"ap-southeast-1": endpoints.Endpoint{
 				Hostname:          "s3-control.ap-southeast-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ap-southeast-1",
-				},
-			},
-			"ap-southeast-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.ap-southeast-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-southeast-1",
@@ -140,22 +116,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "ap-southeast-2",
 				},
 			},
-			"ap-southeast-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.ap-southeast-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ap-southeast-2",
-				},
-			},
 			"ca-central-1": endpoints.Endpoint{
 				Hostname:          "s3-control.ca-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ca-central-1",
-				},
-			},
-			"ca-central-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.ca-central-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ca-central-1",
@@ -168,22 +130,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "ca-central-1",
 				},
 			},
-			"ca-central-1-fips-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control-fips.dualstack.ca-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ca-central-1",
-				},
-			},
 			"eu-central-1": endpoints.Endpoint{
 				Hostname:          "s3-control.eu-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "eu-central-1",
-				},
-			},
-			"eu-central-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.eu-central-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-central-1",
@@ -196,22 +144,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "eu-north-1",
 				},
 			},
-			"eu-north-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.eu-north-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "eu-north-1",
-				},
-			},
 			"eu-west-1": endpoints.Endpoint{
 				Hostname:          "s3-control.eu-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "eu-west-1",
-				},
-			},
-			"eu-west-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.eu-west-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-west-1",
@@ -224,22 +158,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "eu-west-2",
 				},
 			},
-			"eu-west-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.eu-west-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "eu-west-2",
-				},
-			},
 			"eu-west-3": endpoints.Endpoint{
 				Hostname:          "s3-control.eu-west-3.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "eu-west-3",
-				},
-			},
-			"eu-west-3-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.eu-west-3.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-west-3",
@@ -252,22 +172,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "sa-east-1",
 				},
 			},
-			"sa-east-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.sa-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "sa-east-1",
-				},
-			},
 			"us-east-1": endpoints.Endpoint{
 				Hostname:          "s3-control.us-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-east-1",
-				},
-			},
-			"us-east-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.us-east-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-east-1",
@@ -280,22 +186,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "us-east-1",
 				},
 			},
-			"us-east-1-fips-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control-fips.dualstack.us-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-east-1",
-				},
-			},
 			"us-east-2": endpoints.Endpoint{
 				Hostname:          "s3-control.us-east-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-east-2",
-				},
-			},
-			"us-east-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.us-east-2.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-east-2",
@@ -308,22 +200,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "us-east-2",
 				},
 			},
-			"us-east-2-fips-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control-fips.dualstack.us-east-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-east-2",
-				},
-			},
 			"us-west-1": endpoints.Endpoint{
 				Hostname:          "s3-control.us-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-west-1",
-				},
-			},
-			"us-west-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.us-west-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-west-1",
@@ -336,22 +214,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "us-west-1",
 				},
 			},
-			"us-west-1-fips-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control-fips.dualstack.us-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-west-1",
-				},
-			},
 			"us-west-2": endpoints.Endpoint{
 				Hostname:          "s3-control.us-west-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-west-2",
-				},
-			},
-			"us-west-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.us-west-2.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-west-2",
@@ -364,7 +228,156 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "us-west-2",
 				},
 			},
-			"us-west-2-fips-dualstack": endpoints.Endpoint{
+		},
+		DualStackEndpoints: endpoints.Endpoints{
+			"ap-northeast-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.ap-northeast-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ap-northeast-1",
+				},
+			},
+			"ap-northeast-2": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.ap-northeast-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ap-northeast-2",
+				},
+			},
+			"ap-northeast-3": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.ap-northeast-3.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ap-northeast-3",
+				},
+			},
+			"ap-south-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.ap-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ap-south-1",
+				},
+			},
+			"ap-southeast-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.ap-southeast-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ap-southeast-1",
+				},
+			},
+			"ap-southeast-2": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.ap-southeast-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ap-southeast-2",
+				},
+			},
+			"ca-central-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.ca-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ca-central-1",
+				},
+			},
+			"ca-central-1-fips": endpoints.Endpoint{
+				Hostname:          "s3-control-fips.dualstack.ca-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ca-central-1",
+				},
+			},
+			"eu-central-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.eu-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "eu-central-1",
+				},
+			},
+			"eu-north-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.eu-north-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "eu-north-1",
+				},
+			},
+			"eu-west-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.eu-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "eu-west-1",
+				},
+			},
+			"eu-west-2": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.eu-west-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "eu-west-2",
+				},
+			},
+			"eu-west-3": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.eu-west-3.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "eu-west-3",
+				},
+			},
+			"sa-east-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.sa-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "sa-east-1",
+				},
+			},
+			"us-east-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.us-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-1",
+				},
+			},
+			"us-east-1-fips": endpoints.Endpoint{
+				Hostname:          "s3-control-fips.dualstack.us-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-1",
+				},
+			},
+			"us-east-2": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.us-east-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-2",
+				},
+			},
+			"us-east-2-fips": endpoints.Endpoint{
+				Hostname:          "s3-control-fips.dualstack.us-east-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-2",
+				},
+			},
+			"us-west-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.us-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-1",
+				},
+			},
+			"us-west-1-fips": endpoints.Endpoint{
+				Hostname:          "s3-control-fips.dualstack.us-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-1",
+				},
+			},
+			"us-west-2": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.us-west-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-2",
+				},
+			},
+			"us-west-2-fips": endpoints.Endpoint{
 				Hostname:          "s3-control-fips.dualstack.us-west-2.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
@@ -380,18 +393,16 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"s3v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "s3-control.{region}.amazonwebservices.com.cn",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:    partitionRegexp.AwsCn,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
 			"cn-north-1": endpoints.Endpoint{
 				Hostname:          "s3-control.cn-north-1.amazonaws.com.cn",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "cn-north-1",
-				},
-			},
-			"cn-north-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.cn-north-1.amazonaws.com.cn",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "cn-north-1",
@@ -404,7 +415,16 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "cn-northwest-1",
 				},
 			},
-			"cn-northwest-1-dualstack": endpoints.Endpoint{
+		},
+		DualStackEndpoints: endpoints.Endpoints{
+			"cn-north-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.cn-north-1.amazonaws.com.cn",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "cn-north-1",
+				},
+			},
+			"cn-northwest-1": endpoints.Endpoint{
 				Hostname:          "s3-control.dualstack.cn-northwest-1.amazonaws.com.cn",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
@@ -440,18 +460,16 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"s3v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "s3-control.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:    partitionRegexp.AwsUsGov,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
 			"us-gov-east-1": endpoints.Endpoint{
 				Hostname:          "s3-control.us-gov-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-gov-east-1",
-				},
-			},
-			"us-gov-east-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.us-gov-east-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-gov-east-1",
@@ -464,22 +482,8 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "us-gov-east-1",
 				},
 			},
-			"us-gov-east-1-fips-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control-fips.dualstack.us-gov-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-gov-east-1",
-				},
-			},
 			"us-gov-west-1": endpoints.Endpoint{
 				Hostname:          "s3-control.us-gov-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-gov-west-1",
-				},
-			},
-			"us-gov-west-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3-control.dualstack.us-gov-west-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-gov-west-1",
@@ -492,7 +496,30 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "us-gov-west-1",
 				},
 			},
-			"us-gov-west-1-fips-dualstack": endpoints.Endpoint{
+		},
+		DualStackEndpoints: endpoints.Endpoints{
+			"us-gov-east-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.us-gov-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-east-1",
+				},
+			},
+			"us-gov-east-1-fips": endpoints.Endpoint{
+				Hostname:          "s3-control-fips.dualstack.us-gov-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-east-1",
+				},
+			},
+			"us-gov-west-1": endpoints.Endpoint{
+				Hostname:          "s3-control.dualstack.us-gov-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-west-1",
+				},
+			},
+			"us-gov-west-1-fips": endpoints.Endpoint{
 				Hostname:          "s3-control-fips.dualstack.us-gov-west-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 				CredentialScope: endpoints.CredentialScope{

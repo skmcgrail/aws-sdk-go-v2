@@ -10,7 +10,12 @@ import (
 
 // Options is the endpoint resolver configuration options
 type Options struct {
-	DisableHTTPS bool
+	DisableHTTPS         bool
+	UseDualStackEndpoint aws.DualStackEndpointState
+}
+
+func isDualStackEndpointEnabled(value aws.DualStackEndpointState) bool {
+	return value == aws.DualStackEndpointStateEnabled
 }
 
 // Resolver Cognito Identity endpoint resolver
@@ -26,6 +31,7 @@ func (r *Resolver) ResolveEndpoint(region string, options Options) (endpoint aws
 
 	opt := endpoints.Options{
 		DisableHTTPS: options.DisableHTTPS,
+		UseDualStack: isDualStackEndpointEnabled(options.UseDualStackEndpoint),
 	}
 	return r.partitions.ResolveEndpoint(region, opt)
 }
@@ -57,6 +63,11 @@ var defaultPartitions = endpoints.Partitions{
 		ID: "aws",
 		Defaults: endpoints.Endpoint{
 			Hostname:          "cognito-identity.{region}.amazonaws.com",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "cognito-identity.{region}.aws",
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
@@ -92,17 +103,23 @@ var defaultPartitions = endpoints.Partitions{
 					Region: "us-west-2",
 				},
 			},
-			"sa-east-1": endpoints.Endpoint{},
-			"us-east-1": endpoints.Endpoint{},
-			"us-east-2": endpoints.Endpoint{},
-			"us-west-1": endpoints.Endpoint{},
-			"us-west-2": endpoints.Endpoint{},
+			"me-south-1": endpoints.Endpoint{},
+			"sa-east-1":  endpoints.Endpoint{},
+			"us-east-1":  endpoints.Endpoint{},
+			"us-east-2":  endpoints.Endpoint{},
+			"us-west-1":  endpoints.Endpoint{},
+			"us-west-2":  endpoints.Endpoint{},
 		},
 	},
 	{
 		ID: "aws-cn",
 		Defaults: endpoints.Endpoint{
 			Hostname:          "cognito-identity.{region}.amazonaws.com.cn",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "cognito-identity.{region}.amazonwebservices.com.cn",
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
@@ -136,6 +153,11 @@ var defaultPartitions = endpoints.Partitions{
 		ID: "aws-us-gov",
 		Defaults: endpoints.Endpoint{
 			Hostname:          "cognito-identity.{region}.amazonaws.com",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "cognito-identity.{region}.aws",
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},

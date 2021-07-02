@@ -10,7 +10,12 @@ import (
 
 // Options is the endpoint resolver configuration options
 type Options struct {
-	DisableHTTPS bool
+	DisableHTTPS         bool
+	UseDualStackEndpoint aws.DualStackEndpointState
+}
+
+func isDualStackEndpointEnabled(value aws.DualStackEndpointState) bool {
+	return value == aws.DualStackEndpointStateEnabled
 }
 
 // Resolver Organizations endpoint resolver
@@ -26,6 +31,7 @@ func (r *Resolver) ResolveEndpoint(region string, options Options) (endpoint aws
 
 	opt := endpoints.Options{
 		DisableHTTPS: options.DisableHTTPS,
+		UseDualStack: isDualStackEndpointEnabled(options.UseDualStackEndpoint),
 	}
 	return r.partitions.ResolveEndpoint(region, opt)
 }
@@ -60,6 +66,11 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "organizations.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:       partitionRegexp.Aws,
 		IsRegionalized:    false,
 		PartitionEndpoint: "aws-global",
@@ -82,6 +93,11 @@ var defaultPartitions = endpoints.Partitions{
 		ID: "aws-cn",
 		Defaults: endpoints.Endpoint{
 			Hostname:          "organizations.{region}.amazonaws.com.cn",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "organizations.{region}.amazonwebservices.com.cn",
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
@@ -121,6 +137,11 @@ var defaultPartitions = endpoints.Partitions{
 		ID: "aws-us-gov",
 		Defaults: endpoints.Endpoint{
 			Hostname:          "organizations.{region}.amazonaws.com",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "organizations.{region}.aws",
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},

@@ -10,7 +10,12 @@ import (
 
 // Options is the endpoint resolver configuration options
 type Options struct {
-	DisableHTTPS bool
+	DisableHTTPS         bool
+	UseDualStackEndpoint aws.DualStackEndpointState
+}
+
+func isDualStackEndpointEnabled(value aws.DualStackEndpointState) bool {
+	return value == aws.DualStackEndpointStateEnabled
 }
 
 // Resolver EBS endpoint resolver
@@ -26,6 +31,7 @@ func (r *Resolver) ResolveEndpoint(region string, options Options) (endpoint aws
 
 	opt := endpoints.Options{
 		DisableHTTPS: options.DisableHTTPS,
+		UseDualStack: isDualStackEndpointEnabled(options.UseDualStackEndpoint),
 	}
 	return r.partitions.ResolveEndpoint(region, opt)
 }
@@ -60,6 +66,11 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "ebs.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:    partitionRegexp.Aws,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
@@ -78,48 +89,23 @@ var defaultPartitions = endpoints.Partitions{
 			"eu-west-1":      endpoints.Endpoint{},
 			"eu-west-2":      endpoints.Endpoint{},
 			"eu-west-3":      endpoints.Endpoint{},
-			"fips-ca-central-1": endpoints.Endpoint{
-				Hostname: "ebs-fips.ca-central-1.amazonaws.com",
-				CredentialScope: endpoints.CredentialScope{
-					Region: "ca-central-1",
-				},
-			},
-			"fips-us-east-1": endpoints.Endpoint{
-				Hostname: "ebs-fips.us-east-1.amazonaws.com",
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-east-1",
-				},
-			},
-			"fips-us-east-2": endpoints.Endpoint{
-				Hostname: "ebs-fips.us-east-2.amazonaws.com",
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-east-2",
-				},
-			},
-			"fips-us-west-1": endpoints.Endpoint{
-				Hostname: "ebs-fips.us-west-1.amazonaws.com",
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-west-1",
-				},
-			},
-			"fips-us-west-2": endpoints.Endpoint{
-				Hostname: "ebs-fips.us-west-2.amazonaws.com",
-				CredentialScope: endpoints.CredentialScope{
-					Region: "us-west-2",
-				},
-			},
-			"me-south-1": endpoints.Endpoint{},
-			"sa-east-1":  endpoints.Endpoint{},
-			"us-east-1":  endpoints.Endpoint{},
-			"us-east-2":  endpoints.Endpoint{},
-			"us-west-1":  endpoints.Endpoint{},
-			"us-west-2":  endpoints.Endpoint{},
+			"me-south-1":     endpoints.Endpoint{},
+			"sa-east-1":      endpoints.Endpoint{},
+			"us-east-1":      endpoints.Endpoint{},
+			"us-east-2":      endpoints.Endpoint{},
+			"us-west-1":      endpoints.Endpoint{},
+			"us-west-2":      endpoints.Endpoint{},
 		},
 	},
 	{
 		ID: "aws-cn",
 		Defaults: endpoints.Endpoint{
 			Hostname:          "ebs.{region}.amazonaws.com.cn",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "ebs.{region}.amazonwebservices.com.cn",
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},
@@ -154,6 +140,11 @@ var defaultPartitions = endpoints.Partitions{
 		ID: "aws-us-gov",
 		Defaults: endpoints.Endpoint{
 			Hostname:          "ebs.{region}.amazonaws.com",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "ebs.{region}.aws",
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"v4"},
 		},

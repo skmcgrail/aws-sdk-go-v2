@@ -12,7 +12,12 @@ import (
 
 // Options is the endpoint resolver configuration options
 type Options struct {
-	DisableHTTPS bool
+	DisableHTTPS         bool
+	UseDualStackEndpoint aws.DualStackEndpointState
+}
+
+func isDualStackEndpointEnabled(value aws.DualStackEndpointState) bool {
+	return value == aws.DualStackEndpointStateEnabled
 }
 
 // Resolver S3 endpoint resolver
@@ -28,6 +33,7 @@ func (r *Resolver) ResolveEndpoint(region string, options Options) (endpoint aws
 
 	opt := endpoints.Options{
 		DisableHTTPS: options.DisableHTTPS,
+		UseDualStack: isDualStackEndpointEnabled(options.UseDualStackEndpoint),
 	}
 	return r.partitions.ResolveEndpoint(region, opt)
 }
@@ -61,6 +67,11 @@ var defaultPartitions = endpoints.Partitions{
 			Hostname:          "s3.{region}.amazonaws.com",
 			Protocols:         []string{"http", "https"},
 			SignatureVersions: []string{"s3v4"},
+		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "s3.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
 		},
 		RegionRegex:    partitionRegexp.Aws,
 		IsRegionalized: true,
@@ -99,90 +110,6 @@ var defaultPartitions = endpoints.Partitions{
 			},
 			"accesspoint-ca-central-1": endpoints.Endpoint{
 				Hostname:          "s3-accesspoint.ca-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-af-south-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.af-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-ap-east-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.ap-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-ap-northeast-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.ap-northeast-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-ap-northeast-2": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.ap-northeast-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-ap-northeast-3": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.ap-northeast-3.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-ap-south-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.ap-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-ap-southeast-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.ap-southeast-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-ap-southeast-2": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.ap-southeast-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-ca-central-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.ca-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-eu-central-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.eu-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-eu-north-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.eu-north-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-eu-south-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.eu-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-eu-west-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.eu-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-eu-west-2": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.eu-west-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-eu-west-3": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.eu-west-3.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-me-south-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.me-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-sa-east-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.sa-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-us-east-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.us-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-us-east-2": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.us-east-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-us-west-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.us-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-us-west-2": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.us-west-2.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 			},
 			"accesspoint-eu-central-1": endpoints.Endpoint{
@@ -234,52 +161,20 @@ var defaultPartitions = endpoints.Partitions{
 				SignatureVersions: []string{"s3v4"},
 			},
 			"af-south-1": endpoints.Endpoint{},
-			"af-south-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.af-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
-			"ap-east-1": endpoints.Endpoint{},
-			"ap-east-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.ap-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
+			"ap-east-1":  endpoints.Endpoint{},
 			"ap-northeast-1": endpoints.Endpoint{
 				Hostname:          "s3.ap-northeast-1.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
-			"ap-northeast-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.ap-northeast-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"ap-northeast-2": endpoints.Endpoint{},
-			"ap-northeast-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.ap-northeast-2.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"ap-northeast-3": endpoints.Endpoint{},
-			"ap-northeast-3-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.ap-northeast-3.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
-			"ap-south-1": endpoints.Endpoint{},
-			"ap-south-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.ap-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
+			"ap-south-1":     endpoints.Endpoint{},
 			"ap-southeast-1": endpoints.Endpoint{
 				Hostname:          "s3.ap-southeast-1.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
-			"ap-southeast-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.ap-southeast-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"ap-southeast-2": endpoints.Endpoint{
 				Hostname:          "s3.ap-southeast-2.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
-			"ap-southeast-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.ap-southeast-2.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
 			"aws-global": endpoints.Endpoint{
@@ -290,65 +185,17 @@ var defaultPartitions = endpoints.Partitions{
 				},
 			},
 			"ca-central-1": endpoints.Endpoint{},
-			"ca-central-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.ca-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"eu-central-1": endpoints.Endpoint{},
-			"eu-central-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.eu-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
-			"eu-north-1": endpoints.Endpoint{},
-			"eu-north-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.eu-north-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
-			"eu-south-1": endpoints.Endpoint{},
-			"eu-south-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.eu-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
+			"eu-north-1":   endpoints.Endpoint{},
+			"eu-south-1":   endpoints.Endpoint{},
 			"eu-west-1": endpoints.Endpoint{
 				Hostname:          "s3.eu-west-1.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
-			"eu-west-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.eu-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"eu-west-2": endpoints.Endpoint{},
-			"eu-west-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.eu-west-2.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"eu-west-3": endpoints.Endpoint{},
-			"eu-west-3-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.eu-west-3.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"fips-accesspoint-ca-central-1": endpoints.Endpoint{
 				Hostname:          "s3-accesspoint-fips.ca-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"fips-accesspoint-dualstack-ca-central-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint-fips.dualstack.ca-central-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"fips-accesspoint-dualstack-us-east-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint-fips.dualstack.us-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"fips-accesspoint-dualstack-us-east-2": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint-fips.dualstack.us-east-2.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"fips-accesspoint-dualstack-us-west-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint-fips.dualstack.us-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"fips-accesspoint-dualstack-us-west-2": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint-fips.dualstack.us-west-2.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 			},
 			"fips-accesspoint-us-east-1": endpoints.Endpoint{
@@ -368,10 +215,6 @@ var defaultPartitions = endpoints.Partitions{
 				SignatureVersions: []string{"s3v4"},
 			},
 			"me-south-1": endpoints.Endpoint{},
-			"me-south-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.me-south-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"s3-external-1": endpoints.Endpoint{
 				Hostname:          "s3-external-1.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
@@ -383,36 +226,262 @@ var defaultPartitions = endpoints.Partitions{
 				Hostname:          "s3.sa-east-1.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
-			"sa-east-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.sa-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"us-east-1": endpoints.Endpoint{
 				Hostname:          "s3.us-east-1.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
-			"us-east-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.us-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"us-east-2": endpoints.Endpoint{},
-			"us-east-2-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.us-east-2.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"us-west-1": endpoints.Endpoint{
 				Hostname:          "s3.us-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
-			"us-west-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.us-west-1.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
 			"us-west-2": endpoints.Endpoint{
 				Hostname:          "s3.us-west-2.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
-			"us-west-2-dualstack": endpoints.Endpoint{
+		},
+		DualStackEndpoints: endpoints.Endpoints{
+			"accesspoint-af-south-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.af-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-east-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-northeast-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-northeast-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-northeast-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-northeast-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-northeast-3": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-northeast-3.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-south-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-south-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-south-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-southeast-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-southeast-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-southeast-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-southeast-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-southeast-3": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-southeast-3.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ap-southeast-4": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ap-southeast-4.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-ca-central-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.ca-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-eu-central-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.eu-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-eu-central-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.eu-central-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-eu-north-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.eu-north-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-eu-south-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.eu-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-eu-south-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.eu-south-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-eu-west-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.eu-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-eu-west-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.eu-west-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-eu-west-3": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.eu-west-3.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-me-central-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.me-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-me-south-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.me-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-me-west-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.me-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-sa-east-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.sa-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-us-east-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.us-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-us-east-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.us-east-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-us-west-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.us-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-us-west-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.us-west-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"af-south-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.af-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-east-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-northeast-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-northeast-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-northeast-2": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-northeast-2.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-northeast-3": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-northeast-3.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-south-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-south-2": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-south-2.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-southeast-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-southeast-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-southeast-2": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-southeast-2.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-southeast-3": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-southeast-3.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ap-southeast-4": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ap-southeast-4.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"ca-central-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.ca-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"eu-central-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.eu-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"eu-central-2": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.eu-central-2.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"eu-north-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.eu-north-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"eu-south-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.eu-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"eu-south-2": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.eu-south-2.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"eu-west-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.eu-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"eu-west-2": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.eu-west-2.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"eu-west-3": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.eu-west-3.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"fips-accesspoint-ca-central-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint-fips.dualstack.ca-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"fips-accesspoint-us-east-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint-fips.dualstack.us-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"fips-accesspoint-us-east-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint-fips.dualstack.us-east-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"fips-accesspoint-us-west-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint-fips.dualstack.us-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"fips-accesspoint-us-west-2": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint-fips.dualstack.us-west-2.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"me-central-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.me-central-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"me-south-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.me-south-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"me-west-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.me-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"sa-east-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.sa-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"us-east-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.us-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"us-east-2": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.us-east-2.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"us-west-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.us-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"us-west-2": endpoints.Endpoint{
 				Hostname:          "s3.dualstack.us-west-2.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
@@ -425,6 +494,11 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"http", "https"},
 			SignatureVersions: []string{"s3v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "s3.{region}.amazonwebservices.com.cn",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:    partitionRegexp.AwsCn,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
@@ -436,20 +510,22 @@ var defaultPartitions = endpoints.Partitions{
 				Hostname:          "s3-accesspoint.cn-northwest-1.amazonaws.com.cn",
 				SignatureVersions: []string{"s3v4"},
 			},
-			"accesspoint-dualstack-cn-north-1": endpoints.Endpoint{
+			"cn-north-1":     endpoints.Endpoint{},
+			"cn-northwest-1": endpoints.Endpoint{},
+		},
+		DualStackEndpoints: endpoints.Endpoints{
+			"accesspoint-cn-north-1": endpoints.Endpoint{
 				Hostname:          "s3-accesspoint.dualstack.cn-north-1.amazonaws.com.cn",
 				SignatureVersions: []string{"s3v4"},
 			},
-			"accesspoint-dualstack-cn-northwest-1": endpoints.Endpoint{
+			"accesspoint-cn-northwest-1": endpoints.Endpoint{
 				Hostname:          "s3-accesspoint.dualstack.cn-northwest-1.amazonaws.com.cn",
 				SignatureVersions: []string{"s3v4"},
 			},
-			"cn-north-1": endpoints.Endpoint{},
-			"cn-north-1-dualstack": endpoints.Endpoint{
+			"cn-north-1": endpoints.Endpoint{
 				Hostname: "s3.dualstack.cn-north-1.amazonaws.com.cn",
 			},
-			"cn-northwest-1": endpoints.Endpoint{},
-			"cn-northwest-1-dualstack": endpoints.Endpoint{
+			"cn-northwest-1": endpoints.Endpoint{
 				Hostname: "s3.dualstack.cn-northwest-1.amazonaws.com.cn",
 			},
 		},
@@ -490,31 +566,20 @@ var defaultPartitions = endpoints.Partitions{
 			Protocols:         []string{"https"},
 			SignatureVersions: []string{"s3", "s3v4"},
 		},
+		DualStackDefaults: endpoints.Endpoint{
+			Hostname:          "s3.{region}.aws",
+			Protocols:         []string{"https"},
+			SignatureVersions: []string{"v4"},
+		},
 		RegionRegex:    partitionRegexp.AwsUsGov,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
-			"accesspoint-dualstack-us-gov-east-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.us-gov-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"accesspoint-dualstack-us-gov-west-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint.dualstack.us-gov-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
 			"accesspoint-us-gov-east-1": endpoints.Endpoint{
 				Hostname:          "s3-accesspoint.us-gov-east-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 			},
 			"accesspoint-us-gov-west-1": endpoints.Endpoint{
 				Hostname:          "s3-accesspoint.us-gov-west-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"fips-accesspoint-dualstack-us-gov-east-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint-fips.dualstack.us-gov-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3v4"},
-			},
-			"fips-accesspoint-dualstack-us-gov-west-1": endpoints.Endpoint{
-				Hostname:          "s3-accesspoint-fips.dualstack.us-gov-west-1.amazonaws.com",
 				SignatureVersions: []string{"s3v4"},
 			},
 			"fips-accesspoint-us-gov-east-1": endpoints.Endpoint{
@@ -535,15 +600,33 @@ var defaultPartitions = endpoints.Partitions{
 				Hostname:  "s3.us-gov-east-1.amazonaws.com",
 				Protocols: []string{"http", "https"},
 			},
-			"us-gov-east-1-dualstack": endpoints.Endpoint{
-				Hostname:          "s3.dualstack.us-gov-east-1.amazonaws.com",
-				SignatureVersions: []string{"s3", "s3v4"},
-			},
 			"us-gov-west-1": endpoints.Endpoint{
 				Hostname:  "s3.us-gov-west-1.amazonaws.com",
 				Protocols: []string{"http", "https"},
 			},
-			"us-gov-west-1-dualstack": endpoints.Endpoint{
+		},
+		DualStackEndpoints: endpoints.Endpoints{
+			"accesspoint-us-gov-east-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.us-gov-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"accesspoint-us-gov-west-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint.dualstack.us-gov-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"fips-accesspoint-us-gov-east-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint-fips.dualstack.us-gov-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"fips-accesspoint-us-gov-west-1": endpoints.Endpoint{
+				Hostname:          "s3-accesspoint-fips.dualstack.us-gov-west-1.amazonaws.com",
+				SignatureVersions: []string{"s3v4"},
+			},
+			"us-gov-east-1": endpoints.Endpoint{
+				Hostname:          "s3.dualstack.us-gov-east-1.amazonaws.com",
+				SignatureVersions: []string{"s3", "s3v4"},
+			},
+			"us-gov-west-1": endpoints.Endpoint{
 				Hostname:          "s3.dualstack.us-gov-west-1.amazonaws.com",
 				SignatureVersions: []string{"s3", "s3v4"},
 			},
@@ -552,21 +635,36 @@ var defaultPartitions = endpoints.Partitions{
 }
 
 // GetDNSSuffix returns the dnsSuffix URL component for the given partition id
-func GetDNSSuffix(id string) (string, error) {
+func GetDNSSuffix(id string, options Options) (string, error) {
 	switch {
 	case strings.EqualFold(id, "aws"):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "aws", nil
+		}
 		return "amazonaws.com", nil
 
 	case strings.EqualFold(id, "aws-cn"):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "amazonwebservices.com.cn", nil
+		}
 		return "amazonaws.com.cn", nil
 
 	case strings.EqualFold(id, "aws-iso"):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "", fmt.Errorf("partition aws-iso does not have a dual-stack dns suffix")
+		}
 		return "c2s.ic.gov", nil
 
 	case strings.EqualFold(id, "aws-iso-b"):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "", fmt.Errorf("partition aws-iso-b does not have a dual-stack dns suffix")
+		}
 		return "sc2s.sgov.gov", nil
 
 	case strings.EqualFold(id, "aws-us-gov"):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "aws", nil
+		}
 		return "amazonaws.com", nil
 
 	default:
@@ -577,21 +675,36 @@ func GetDNSSuffix(id string) (string, error) {
 
 // GetDNSSuffixFromRegion returns the dnsSuffix URL component for the given
 // partition id
-func GetDNSSuffixFromRegion(region string) (string, error) {
+func GetDNSSuffixFromRegion(region string, options Options) (string, error) {
 	switch {
 	case partitionRegexp.Aws.MatchString(region):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "aws", nil
+		}
 		return "amazonaws.com", nil
 
 	case partitionRegexp.AwsCn.MatchString(region):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "amazonwebservices.com.cn", nil
+		}
 		return "amazonaws.com.cn", nil
 
 	case partitionRegexp.AwsIso.MatchString(region):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "", fmt.Errorf("partition aws-iso does not have a dual-stack dns suffix")
+		}
 		return "c2s.ic.gov", nil
 
 	case partitionRegexp.AwsIsoB.MatchString(region):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "", fmt.Errorf("partition aws-iso-b does not have a dual-stack dns suffix")
+		}
 		return "sc2s.sgov.gov", nil
 
 	case partitionRegexp.AwsUsGov.MatchString(region):
+		if options.UseDualStackEndpoint == aws.DualStackEndpointStateEnabled {
+			return "aws", nil
+		}
 		return "amazonaws.com", nil
 
 	default:

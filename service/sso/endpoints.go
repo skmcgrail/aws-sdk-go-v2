@@ -112,9 +112,10 @@ func (m *ResolveEndpoint) HandleSerialize(ctx context.Context, in middleware.Ser
 	return next.HandleSerialize(ctx, in)
 }
 func addResolveEndpointMiddleware(stack *middleware.Stack, o Options) error {
+	endpointOptions := o.EndpointOptions
 	return stack.Serialize.Insert(&ResolveEndpoint{
 		Resolver: o.EndpointResolver,
-		Options:  o.EndpointOptions,
+		Options:  endpointOptions,
 	}, "OperationSerializer", middleware.Before)
 }
 
